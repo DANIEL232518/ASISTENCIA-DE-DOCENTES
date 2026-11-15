@@ -1,0 +1,813 @@
+{% extends "base.html" %}
+
+{% block title %}Panel{% endblock %}
+
+{% block content %}
+<!-- ============================ CABECERA ============================ -->
+<header class="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85">
+  <div class="mx-auto flex max-w-6xl items-center gap-3 px-3 py-3 sm:px-5">
+    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white dark:bg-emerald-600">
+      <svg viewBox="0 0 24 24" class="h-6 w-6 fill-current" aria-hidden="true">
+        <path d="M3 3h8v8H3V3Zm2 2v4h4V5H5Zm8-2h8v8h-8V3Zm2 2v4h4V5h-4ZM3 13h8v8H3v-8Zm2 2v4h4v-4H5Zm8-2h3v3h-3v-3Zm5 0h3v3h-3v-3Zm-5 5h3v3h-3v-3Zm5 0h3v3h-3v-3Z" />
+      </svg>
+    </div>
+    <div class="min-w-0 flex-1">
+      <p class="truncate text-sm font-extrabold leading-tight text-slate-900 dark:text-white">
+        Neurociencias
+      </p>
+      <p class="truncate text-[11px] font-medium text-slate-500 dark:text-slate-400">
+        Control de asistencia docente · máx. 40 docentes
+      </p>
+    </div>
+
+    <button
+      id="temaToggle"
+      type="button"
+      class="btn-soft h-10 w-10 !px-0"
+      title="Cambiar tema claro/oscuro"
+      aria-label="Cambiar tema"
+    >
+      <svg class="h-5 w-5 dark:hidden" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M21.64 13a1 1 0 0 0-1.05-.14 8.05 8.05 0 0 1-3.37.73 8.15 8.15 0 0 1-8.14-8.1 8.6 8.6 0 0 1 .25-2 1 1 0 0 0-1.36-1.15A10.1 10.1 0 0 0 12 21.5a10.14 10.14 0 0 0 9.64-7.45 1 1 0 0 0 0-1.05Z" />
+      </svg>
+      <svg class="hidden h-5 w-5 dark:block" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10Zm0 2.5a1 1 0 0 1 1 1V22a1 1 0 1 1-2 0v-1.5a1 1 0 0 1 1-1Zm0-19a1 1 0 0 1 1 1V3a1 1 0 1 1-2 0V1.5a1 1 0 0 1 1-1ZM20.5 12a1 1 0 0 1 1-1H23a1 1 0 1 1 0 2h-1.5a1 1 0 0 1-1-1ZM1 12a1 1 0 0 1 1-1h1.5a1 1 0 1 1 0 2H2a1 1 0 0 1-1-1Zm17.3-5.3a1 1 0 0 1 1.4 0l1 1a1 1 0 1 1-1.4 1.5l-1-1a1 1 0 0 1 0-1.5Zm-13.6 13.6a1 1 0 0 1 1.4 0l1 1a1 1 0 1 1-1.4 1.4l-1-1a1 1 0 0 1 0-1.4Zm14.6 1.4-1-1a1 1 0 1 0-1.4 1.4l1 1a1 1 0 0 0 1.4-1.4ZM4.3 6.7l1 1A1 1 0 0 1 3.9 9.1l-1-1A1 1 0 0 1 4.3 6.7Z" />
+      </svg>
+    </button>
+
+    <div class="hidden items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 sm:flex dark:border-slate-800 dark:bg-slate-900">
+      <div id="userAvatar" class="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-xs font-bold text-white">D</div>
+      <div class="leading-tight">
+        <p id="userNombre" class="max-w-[140px] truncate text-xs font-bold text-slate-800 dark:text-slate-100">—</p>
+        <p id="userRol" class="text-[10px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">—</p>
+      </div>
+    </div>
+
+    <button id="btnSalir" type="button" class="btn-soft h-10 !px-3" title="Cerrar sesión">
+      <svg viewBox="0 0 24 24" class="h-4 w-4 fill-current" aria-hidden="true">
+        <path d="M10 3a1 1 0 0 1 0 2H6v14h4a1 1 0 1 1 0 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5Zm7.7 3.3a1 1 0 0 1 1.4 0l4 4a1 1 0 0 1 0 1.4l-4 4a1 1 0 0 1-1.4-1.4l2.3-2.3H10a1 1 0 1 1 0-2h10l-2.3-2.3a1 1 0 0 1 0-1.4Z" />
+      </svg>
+      <span class="hidden sm:inline">Salir</span>
+    </button>
+  </div>
+
+  <!-- Navegación -->
+  <nav class="mx-auto max-w-6xl overflow-x-auto px-3 pb-2 sm:px-5">
+    <div class="flex w-max items-center gap-1 rounded-full bg-slate-100 p-1 dark:bg-slate-900">
+      <button class="nav-pill" data-nav="dashboard">Inicio</button>
+      <button class="nav-pill" data-nav="escanear">Escanear QR</button>
+      <button class="nav-pill" data-nav="historial">Historial</button>
+      <button class="nav-pill" data-nav="pagos" data-solo-directora>Pagos</button>
+      <button class="nav-pill" data-nav="credenciales">Credenciales</button>
+      <button class="nav-pill" data-nav="programar">Horarios</button>
+      <button class="nav-pill" data-nav="docentes" data-solo-directora>Docentes</button>
+      <button class="nav-pill" data-nav="usuarios" data-solo-directora>Administrativos</button>
+    </div>
+  </nav>
+</header>
+
+<main class="mx-auto max-w-6xl px-3 pb-24 pt-5 sm:px-5">
+  <!-- ======================== VISTA: DASHBOARD ======================== -->
+  <section id="view-dashboard" class="view">
+    <div class="mb-5">
+      <h1 id="dashSaludo" class="text-2xl font-extrabold text-slate-900 dark:text-white sm:text-3xl">
+        Bienvenida
+      </h1>
+      <p id="dashFecha" class="text-sm font-medium capitalize text-slate-500 dark:text-slate-400"></p>
+    </div>
+
+    <button id="btnEscanearGrande" type="button" class="btn-primary btn-lg mb-5 w-full animate-pulseRing">
+      <svg viewBox="0 0 24 24" class="h-6 w-6 fill-current" aria-hidden="true">
+        <path d="M3 3h6v2H5v4H3V3Zm12 0h6v6h-2V5h-4V3ZM3 15h2v4h4v2H3v-6Zm16 0h2v6h-6v-2h4v-4ZM7 7h4v4H7V7Zm6 0h4v4h-4V7ZM7 13h4v4H7v-4Zm6 3h4v1h-4v-1Zm0-3h1v3h-1v-3Zm3 0h1v1h-1v-1Z" />
+      </svg>
+      Registrar Asistencia (Escanear QR)
+    </button>
+
+    <div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div class="stat">
+        <p id="statDocentes" class="stat-value">0</p>
+        <p class="stat-label">Docentes activos</p>
+      </div>
+      <div class="stat">
+        <p id="statAsistencias" class="stat-value">0</p>
+        <p class="stat-label">Registros hoy</p>
+      </div>
+      <div class="stat">
+        <p id="statPuntuales" class="stat-value text-emerald-600 dark:text-emerald-400">0</p>
+        <p class="stat-label">Puntuales</p>
+      </div>
+      <div class="stat">
+        <p id="statTardanzas" class="stat-value text-amber-600 dark:text-amber-400">0</p>
+        <p class="stat-label">Tardanzas</p>
+      </div>
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-3">
+      <div class="lg:col-span-2">
+        <div class="card p-5">
+          <div class="mb-3 flex items-center justify-between gap-2">
+            <p class="card-title">Evento activo actual</p>
+            <span id="dashEventoBadge" class="badge-neutral">Sin evento</span>
+          </div>
+          <div id="dashEventoActivo" class="space-y-2"></div>
+        </div>
+
+        <div class="card mt-4 p-5">
+          <p class="card-title mb-3">Programación de hoy</p>
+          <div id="dashEventosHoy" class="space-y-2"></div>
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        <div class="card p-4">
+          <p class="card-title mb-3">Accesos rápidos</p>
+          <div class="grid gap-2">
+            <button data-nav="historial" class="btn-soft justify-start">
+              <svg viewBox="0 0 24 24" class="h-5 w-5 fill-current" aria-hidden="true">
+                <path d="M7 2h10a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3Zm0 2a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1H7Zm2 3h6a1 1 0 1 1 0 2H9a1 1 0 0 1 0-2Zm0 4h6a1 1 0 1 1 0 2H9a1 1 0 0 1 0-2Zm0 4h4a1 1 0 1 1 0 2H9a1 1 0 0 1 0-2Z" />
+              </svg>
+              Historial y Reportes
+            </button>
+            <button data-nav="credenciales" class="btn-soft justify-start">
+              <svg viewBox="0 0 24 24" class="h-5 w-5 fill-current" aria-hidden="true">
+                <path d="M3 3h8v8H3V3Zm2 2v4h4V5H5Zm8-2h8v8h-8V3Zm2 2v4h4V5h-4ZM3 13h8v8H3v-8Zm2 2v4h4v-4H5Zm8-2h3v3h-3v-3Zm5 0h3v3h-3v-3Zm-5 5h3v3h-3v-3Zm5 0h3v3h-3v-3Z" />
+              </svg>
+              Credenciales
+            </button>
+            <button data-nav="pagos" data-solo-directora class="btn-soft justify-start">
+              <svg viewBox="0 0 24 24" class="h-5 w-5 fill-current" aria-hidden="true">
+                <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 15h-2v-1.2c-1.7-.3-3-1.5-3-3.1h2c0 .8.8 1.3 2 1.3s2-.5 2-1.2c0-.6-.5-1-1.8-1.3-2-.4-3.2-1.1-3.2-2.8 0-1.5 1.2-2.6 3-2.9V6h2v1.1c1.6.3 2.6 1.4 2.6 2.9h-2c0-.7-.7-1.2-1.8-1.2s-1.8.5-1.8 1.1c0 .6.6.9 1.9 1.2 2 .4 3.1 1.1 3.1 2.9 0 1.6-1.2 2.7-3 3V17Z" />
+              </svg>
+              Calcular pagos
+            </button>
+            <button data-nav="programar" class="btn-soft justify-start">
+              <svg viewBox="0 0 24 24" class="h-5 w-5 fill-current" aria-hidden="true">
+                <path d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1V3a1 1 0 0 1 1-1Zm12 8H5v9h14v-9ZM8 13h3v3H8v-3Z" />
+              </svg>
+              Programar Horarios
+            </button>
+            <button data-nav="docentes" data-solo-directora class="btn-soft justify-start">
+              <svg viewBox="0 0 24 24" class="h-5 w-5 fill-current" aria-hidden="true">
+                <path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 2c-4.4 0-8 2.2-8 5v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1c0-2.8-3.6-5-8-5Z" />
+              </svg>
+              Docentes (máx. 40)
+            </button>
+            <button data-nav="usuarios" data-solo-directora class="btn-soft justify-start">
+              <svg viewBox="0 0 24 24" class="h-5 w-5 fill-current" aria-hidden="true">
+                <path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7 1a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-7 2c-3.3 0-6 1.7-6 3.8V20h12v-2.2C15 15.7 12.3 14 9 14Zm7 0c-.7 0-1.4.1-2 .2 1.2 1 2 2.3 2 3.6V20h5v-1.7c0-2.3-2.2-3.3-5-3.3Z" />
+              </svg>
+              Administrativos
+            </button>
+          </div>
+        </div>
+
+        {% set wa_extra = 'w-full' %}
+        <div class="card p-4">
+          <p class="card-title mb-3">Ayuda al docente</p>
+          {% include "partials/whatsapp.html" %}
+          <a href="/mi-credencial" target="_blank" class="btn-soft mt-2 w-full justify-start">
+            <svg viewBox="0 0 24 24" class="h-5 w-5 fill-current" aria-hidden="true">
+              <path d="M4 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4V4Zm10 2a2 2 0 0 1 2-2h4v14h-6a2 2 0 0 0-2 2V6h2Z" />
+            </svg>
+            Consultar mi credencial
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================== VISTA: ESCANEAR ======================== -->
+  <section id="view-escanear" class="view">
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <h1 class="text-xl font-extrabold text-slate-900 dark:text-white sm:text-2xl">Escaneo de ingreso</h1>
+        <div id="scanEventoInfo" class="text-sm font-medium text-slate-500 dark:text-slate-400">
+          Detectando bloque horario…
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="scanContador" class="badge-neutral">0 registros</span>
+        <span id="scanEstado" class="badge-neutral">Detenido</span>
+      </div>
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-5">
+      <div class="lg:col-span-3">
+        <div class="scan-frame scan-corners relative aspect-square w-full">
+          <div id="scanViewport" class="h-full w-full"></div>
+          <div id="scanPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-900 text-center text-slate-300">
+            <svg viewBox="0 0 24 24" class="h-14 w-14 fill-current opacity-60" aria-hidden="true">
+              <path d="M4 4h6v2H6v4H4V4Zm10 0h6v6h-2V6h-4V4ZM4 14h2v4h4v2H4v-6Zm16 0v6h-6v-2h4v-4h2ZM8 8h4v4H8V8Zm8 0v4h-4V8h4Zm-8 8v-4h4v4H8Z" />
+            </svg>
+            <p class="px-6 text-sm font-medium">Activa la cámara para escanear las credenciales QR.</p>
+          </div>
+          <div id="scanResultado" class="pointer-events-none absolute inset-x-3 bottom-3 z-20 hidden"></div>
+        </div>
+
+        <div class="mt-3 flex flex-wrap gap-2">
+          <button id="scanStart" class="btn-primary flex-1">
+            <svg viewBox="0 0 24 24" class="h-5 w-5 fill-current" aria-hidden="true">
+              <path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 3.5V7l-4 3.5Z" />
+            </svg>
+            Activar cámara
+          </button>
+          <button id="scanStop" class="btn-soft flex-1" disabled>
+            <svg viewBox="0 0 24 24" class="h-5 w-5 fill-current" aria-hidden="true">
+              <path d="M6 6h12v12H6z" />
+            </svg>
+            Detener
+          </button>
+        </div>
+
+        <div class="card mt-3 p-3">
+          <label class="label" for="scanManual">Ingreso manual (si el QR está dañado)</label>
+          <div class="flex gap-2">
+            <input id="scanManual" class="input font-mono uppercase" placeholder="DOC-XXXXXXXX" autocomplete="off" />
+            <button id="btnManual" class="btn-dark shrink-0">Registrar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-2">
+        <div class="card p-4">
+          <div class="mb-2 flex items-center justify-between">
+            <p class="card-title">Últimos escaneos</p>
+            <button id="btnLimpiarRecientes" class="text-xs font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+              Limpiar
+            </button>
+          </div>
+          <div id="scanRecientes" class="space-y-2"></div>
+          <p id="scanRecientesVacio" class="py-6 text-center text-sm text-slate-400">
+            Aún no hay escaneos en esta sesión.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================== VISTA: HISTORIAL ======================== -->
+  <section id="view-historial" class="view">
+    <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 class="text-xl font-extrabold text-slate-900 dark:text-white sm:text-2xl">Historial y Reportes</h1>
+        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
+          Ordenado por orden de llegada (hora real de escaneo).
+        </p>
+      </div>
+      <button id="btnExportar" class="btn-dark">
+        <svg viewBox="0 0 24 24" class="h-5 w-5 fill-current" aria-hidden="true">
+          <path d="M12 3a1 1 0 0 1 1 1v8.6l2.3-2.3a1 1 0 0 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L11 12.6V4a1 1 0 0 1 1-1ZM5 18a1 1 0 0 1 1 1v1h12v-1a1 1 0 1 1 2 0v1a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-1a1 1 0 0 1 1-1Z" />
+        </svg>
+        Exportar a Excel (.xlsx)
+      </button>
+    </div>
+
+    <div class="card mb-4 p-4">
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div>
+          <label class="label" for="fDesde">Desde</label>
+          <input id="fDesde" type="date" class="input" />
+        </div>
+        <div>
+          <label class="label" for="fHasta">Hasta</label>
+          <input id="fHasta" type="date" class="input" />
+        </div>
+        <div>
+          <label class="label" for="fDocente">Docente</label>
+          <select id="fDocente" class="input">
+            <option value="">Todos los docentes</option>
+          </select>
+        </div>
+        <div class="flex items-end gap-2">
+          <button id="btnHoy" class="btn-soft flex-1 !px-2">Hoy</button>
+          <button id="btnSemana" class="btn-soft flex-1 !px-2">Semana</button>
+          <button id="btnMes" class="btn-soft flex-1 !px-2">Mes</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="mb-4 grid grid-cols-3 gap-3">
+      <div class="stat">
+        <p id="hTotal" class="stat-value">0</p>
+        <p class="stat-label">Registros</p>
+      </div>
+      <div class="stat">
+        <p id="hPuntuales" class="stat-value text-emerald-600 dark:text-emerald-400">0</p>
+        <p class="stat-label">Puntuales</p>
+      </div>
+      <div class="stat">
+        <p id="hTardanzas" class="stat-value text-amber-600 dark:text-amber-400">0</p>
+        <p class="stat-label">Tardanzas</p>
+      </div>
+    </div>
+
+    <div class="card overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full table-zebra">
+          <thead class="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900">
+            <tr>
+              <th class="th">N°</th>
+              <th class="th">Fecha</th>
+              <th class="th">Evento</th>
+              <th class="th">Docente</th>
+              <th class="th">Hora real</th>
+              <th class="th">Hora computable</th>
+              <th class="th">Estado</th>
+              <th class="th">Registrado por</th>
+              <th class="th text-right" data-solo-directora>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="histTabla"></tbody>
+        </table>
+      </div>
+      <p id="histVacio" class="py-10 text-center text-sm text-slate-400">Sin registros en el rango seleccionado.</p>
+    </div>
+  </section>
+
+  <!-- ======================== VISTA: PAGOS ======================== -->
+  <section id="view-pagos" class="view">
+    <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 class="text-xl font-extrabold text-slate-900 dark:text-white sm:text-2xl">Cálculo de pagos</h1>
+        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
+          El descuento por tardanza es proporcional a los minutos de retraso sobre la hora de inicio.
+          Dentro de la tolerancia no se descuenta.
+        </p>
+      </div>
+      <button id="btnExportarPagos" class="btn-dark">
+        <svg viewBox="0 0 24 24" class="h-5 w-5 fill-current" aria-hidden="true">
+          <path d="M12 3a1 1 0 0 1 1 1v8.6l2.3-2.3a1 1 0 0 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L11 12.6V4a1 1 0 0 1 1-1ZM5 18a1 1 0 0 1 1 1v1h12v-1a1 1 0 1 1 2 0v1a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-1a1 1 0 0 1 1-1Z" />
+        </svg>
+        Exportar pagos (.xlsx)
+      </button>
+    </div>
+
+    <div id="pagoAvisoTarifa" class="mb-4 hidden rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-200"></div>
+
+    <div class="card mb-4 p-4">
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div>
+          <label class="label" for="pagoDesde">Desde</label>
+          <input id="pagoDesde" type="date" class="input" />
+        </div>
+        <div>
+          <label class="label" for="pagoHasta">Hasta</label>
+          <input id="pagoHasta" type="date" class="input" />
+        </div>
+        <div>
+          <label class="label" for="pagoDocente">Docente</label>
+          <select id="pagoDocente" class="input">
+            <option value="">Todos los docentes</option>
+          </select>
+        </div>
+        <div class="flex items-end gap-2">
+          <button id="pagoHoy" class="btn-soft flex-1 !px-2">Hoy</button>
+          <button id="pagoSemana" class="btn-soft flex-1 !px-2">Semana</button>
+          <button id="pagoMes" class="btn-soft flex-1 !px-2">Mes</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div class="stat">
+        <p id="pagoNeto" class="stat-value text-emerald-600 dark:text-emerald-400">S/ 0.00</p>
+        <p class="stat-label">Neto a pagar</p>
+      </div>
+      <div class="stat">
+        <p id="pagoBruto" class="stat-value">S/ 0.00</p>
+        <p class="stat-label">Bruto</p>
+      </div>
+      <div class="stat">
+        <p id="pagoDescuento" class="stat-value text-amber-600 dark:text-amber-400">S/ 0.00</p>
+        <p class="stat-label">Descuentos</p>
+      </div>
+      <div class="stat">
+        <p id="pagoAsistencias" class="stat-value">0</p>
+        <p class="stat-label">Asistencias / docentes</p>
+      </div>
+    </div>
+
+    <div class="card mb-4 overflow-hidden">
+      <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+        <p class="card-title">Resumen por docente</p>
+        <span id="pagoPeriodo" class="text-xs font-medium text-slate-400"></span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full table-zebra">
+          <thead class="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900">
+            <tr>
+              <th class="th">Docente</th>
+              <th class="th">Tarifa/h</th>
+              <th class="th">Asistencias</th>
+              <th class="th">Tardanzas</th>
+              <th class="th">Min. tarde</th>
+              <th class="th">Bruto</th>
+              <th class="th">Descuento</th>
+              <th class="th">Neto</th>
+              <th class="th text-right">Acción</th>
+            </tr>
+          </thead>
+          <tbody id="pagoResumen"></tbody>
+        </table>
+      </div>
+      <p id="pagoResumenVacio" class="py-10 text-center text-sm text-slate-400">
+        No hay asistencias en el rango seleccionado.
+      </p>
+    </div>
+
+    <div class="card overflow-hidden">
+      <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+        <p class="card-title">Detalle por asistencia</p>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full table-zebra">
+          <thead class="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900">
+            <tr>
+              <th class="th">Fecha</th>
+              <th class="th">Evento</th>
+              <th class="th">Docente</th>
+              <th class="th">Hora inicio</th>
+              <th class="th">Hora real</th>
+              <th class="th">Estado</th>
+              <th class="th">Min. tarde</th>
+              <th class="th">Tarifa/h</th>
+              <th class="th">Bruto</th>
+              <th class="th">Descuento</th>
+              <th class="th">Neto</th>
+            </tr>
+          </thead>
+          <tbody id="pagoDetalle"></tbody>
+        </table>
+      </div>
+      <p id="pagoDetalleVacio" class="py-10 text-center text-sm text-slate-400">
+        Sin asistencias para mostrar.
+      </p>
+    </div>
+  </section>
+
+  <!-- ======================== VISTA: PROGRAMAR ======================== -->
+  <section id="view-programar" class="view">
+    <h1 class="mb-4 text-xl font-extrabold text-slate-900 dark:text-white sm:text-2xl">Programación de horarios</h1>
+
+    <div class="grid gap-4 lg:grid-cols-2">
+      <div class="card p-4">
+        <p class="card-title mb-3">Evento espontáneo (rápido)</p>
+        <form id="formEvento" class="space-y-3">
+          <div>
+            <label class="label" for="evTitulo">Título</label>
+            <input id="evTitulo" class="input" required maxlength="160" placeholder="Ej. Jornada de reforzamiento" />
+          </div>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label class="label" for="evFecha">Fecha</label>
+              <input id="evFecha" type="date" class="input" required />
+            </div>
+            <div>
+              <label class="label" for="evTolerancia">Tolerancia (min)</label>
+              <input id="evTolerancia" type="number" class="input" min="0" max="120" value="5" required />
+            </div>
+            <div>
+              <label class="label" for="evInicio">Hora inicio</label>
+              <input id="evInicio" type="time" class="input" required />
+            </div>
+            <div>
+              <label class="label" for="evFin">Hora fin</label>
+              <input id="evFin" type="time" class="input" required />
+            </div>
+          </div>
+          <label class="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300">
+            <input id="evEspontaneo" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-emerald-600" checked />
+            Marcar como evento espontáneo del día
+          </label>
+          <button class="btn-primary w-full" type="submit">Crear evento</button>
+        </form>
+      </div>
+
+      <div class="card p-4" data-solo-directora>
+        <p class="card-title mb-3">Programación recurrente</p>
+        <form id="formRecurrente" class="space-y-3">
+          <div>
+            <label class="label" for="recTitulo">Título</label>
+            <input id="recTitulo" class="input" required maxlength="160" placeholder="Ej. Ingreso turno mañana" />
+          </div>
+          <div>
+            <span class="label">Días de la semana</span>
+            <div id="recDias" class="flex flex-wrap gap-2">
+              <button type="button" class="btn-soft !px-3 !py-2 text-xs" data-dia="0">Lun</button>
+              <button type="button" class="btn-soft !px-3 !py-2 text-xs" data-dia="1">Mar</button>
+              <button type="button" class="btn-soft !px-3 !py-2 text-xs" data-dia="2">Mié</button>
+              <button type="button" class="btn-soft !px-3 !py-2 text-xs" data-dia="3">Jue</button>
+              <button type="button" class="btn-soft !px-3 !py-2 text-xs" data-dia="4">Vie</button>
+              <button type="button" class="btn-soft !px-3 !py-2 text-xs" data-dia="5">Sáb</button>
+              <button type="button" class="btn-soft !px-3 !py-2 text-xs" data-dia="6">Dom</button>
+            </div>
+          </div>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label class="label" for="recInicio">Hora inicio</label>
+              <input id="recInicio" type="time" class="input" value="16:00" required />
+            </div>
+            <div>
+              <label class="label" for="recFin">Hora fin</label>
+              <input id="recFin" type="time" class="input" value="20:00" required />
+            </div>
+            <div>
+              <label class="label" for="recTolerancia">Tolerancia (min)</label>
+              <input id="recTolerancia" type="number" class="input" min="0" max="120" value="5" required />
+            </div>
+            <div>
+              <label class="label" for="recAlcance">Rango</label>
+              <select id="recAlcance" class="input">
+                <option value="mes">Mensual (fin de mes actual)</option>
+                <option value="anual">Anual (12 meses)</option>
+                <option value="manual">Manual</option>
+              </select>
+            </div>
+            <div>
+              <label class="label" for="recDesde">Desde</label>
+              <input id="recDesde" type="date" class="input" required />
+            </div>
+            <div>
+              <label class="label" for="recHasta">Hasta</label>
+              <input id="recHasta" type="date" class="input" required />
+            </div>
+          </div>
+          <button class="btn-primary w-full" type="submit">Generar programación</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card mt-4 p-4">
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <p class="card-title">Programación registrada</p>
+        <div class="flex items-center gap-2">
+          <input id="progDesde" type="date" class="input !w-auto !py-1.5 text-xs" />
+          <button id="btnProgCargar" class="btn-soft !px-3 !py-1.5 text-xs">Ver</button>
+        </div>
+      </div>
+      <div id="listaEventos" class="space-y-2"></div>
+      <p id="listaEventosVacio" class="py-6 text-center text-sm text-slate-400">No hay eventos programados.</p>
+    </div>
+  </section>
+
+  <!-- ======================== VISTA: DOCENTES ======================== -->
+  <section id="view-docentes" class="view">
+    <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 class="text-xl font-extrabold text-slate-900 dark:text-white sm:text-2xl">Docentes</h1>
+        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
+          Capacidad máxima de 40 docentes activos.
+        </p>
+      </div>
+      <button id="btnNuevoDocente" class="btn-primary" data-solo-directora>
+        <svg viewBox="0 0 24 24" class="h-5 w-5 fill-current" aria-hidden="true">
+          <path d="M11 5a1 1 0 0 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5Z" />
+        </svg>
+        Nuevo docente
+      </button>
+    </div>
+
+    <div class="card mb-4 p-4">
+      <div class="mb-2 flex items-center justify-between text-sm font-semibold text-slate-600 dark:text-slate-300">
+        <span id="docContador">0 / 40</span>
+        <span id="docPorcentaje" class="text-slate-400">0%</span>
+      </div>
+      <div class="h-2.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+        <div id="docBarra" class="h-full w-0 rounded-full bg-emerald-500 transition-all duration-500"></div>
+      </div>
+      <div class="mt-3 flex gap-2">
+        <input id="docBuscar" class="input" placeholder="Buscar por nombre, especialidad o token…" />
+        <label class="btn-soft shrink-0 cursor-pointer">
+          <input id="docInactivos" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-emerald-600" />
+          <span class="text-xs">Ver inactivos</span>
+        </label>
+      </div>
+    </div>
+
+    <div id="listaDocentes" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"></div>
+    <p id="docVacio" class="py-10 text-center text-sm text-slate-400">No hay docentes registrados.</p>
+  </section>
+
+  <!-- ======================== VISTA: CREDENCIALES ======================== -->
+  <section id="view-credenciales" class="view">
+    <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 class="text-xl font-extrabold text-slate-900 dark:text-white sm:text-2xl">Credenciales de docentes</h1>
+        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
+          Aquí están las credenciales QR de todos los docentes. Haz clic en <strong>Ver</strong> para ampliarla o en <strong>Descargar</strong> para guardarla.
+        </p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <input id="credBuscar" type="search" placeholder="Buscar por nombre o código…" class="input !w-56" />
+        <a id="btnDescargarZip" href="/api/credenciales/zip" download class="btn-primary">
+          <svg viewBox="0 0 24 24" class="h-5 w-5 fill-current" aria-hidden="true">
+            <path d="M12 3a1 1 0 0 1 1 1v9.586l3.293-3.293a1 1 0 1 1 1.414 1.414l-5 5a1 1 0 0 1-1.414 0l-5-5a1 1 0 1 1 1.414-1.414L11 13.586V4a1 1 0 0 1 1-1ZM5 19a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H6a1 1 0 0 1-1-1Z" />
+          </svg>
+          Descargar todas (ZIP)
+        </a>
+      </div>
+    </div>
+
+    <div id="credVacio" class="card py-12 text-center text-sm text-slate-400 hidden">No hay docentes registrados.</div>
+
+    <div class="card overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full table-zebra">
+          <thead class="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900">
+            <tr>
+              <th class="th w-14">#</th>
+              <th class="th">Docente</th>
+              <th class="th">Especialidad</th>
+              <th class="th">Código QR</th>
+              <th class="th">Vigencia</th>
+              <th class="th">Estado</th>
+              <th class="th text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="listaCredenciales"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================== VISTA: USUARIOS ======================== -->
+  <section id="view-usuarios" class="view">
+    <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 class="text-xl font-extrabold text-slate-900 dark:text-white sm:text-2xl">Secretaría y Administrativos</h1>
+        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
+          Cuentas con permiso de escaneo e historial del día. La cuenta de Dirección es única y está protegida.
+        </p>
+      </div>
+      <button id="btnNuevoUsuario" class="btn-primary">Nueva cuenta</button>
+    </div>
+
+    <div class="card overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full table-zebra">
+          <thead class="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900">
+            <tr>
+              <th class="th">Nombre</th>
+              <th class="th">Email</th>
+              <th class="th">Rol</th>
+              <th class="th">Estado</th>
+              <th class="th text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="listaUsuarios"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ============================ PIE ============================ -->
+<footer class="border-t border-slate-200 bg-white py-6 dark:border-slate-800 dark:bg-slate-950">
+  <div class="mx-auto flex max-w-6xl flex-col items-center gap-3 px-4 text-center">
+    {% set wa_extra = 'w-full sm:w-auto' %}
+    {% include "partials/whatsapp.html" %}
+    <p class="text-xs text-slate-400">
+      Neurociencias · Control de Asistencia Docente · PWA v1.0 (máx. 40 docentes)
+    </p>
+  </div>
+</footer>
+
+<!-- ============================ MODAL DOCENTE ============================ -->
+<div id="modalDocente" class="fixed inset-0 z-[70] hidden items-center justify-center bg-slate-900/60 p-3 backdrop-blur-sm">
+  <div class="card w-full max-w-lg animate-pop p-5">
+    <div class="mb-4 flex items-center justify-between">
+      <h2 id="modalDocenteTitulo" class="text-lg font-bold text-slate-900 dark:text-white">Nuevo docente</h2>
+      <button type="button" class="btn-soft h-9 w-9 !px-0" data-cerrar="modalDocente">✕</button>
+    </div>
+    <form id="formDocente" class="space-y-3">
+      <input type="hidden" id="docId" />
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label class="label" for="docNombres">Nombres</label>
+          <input id="docNombres" class="input" required maxlength="120" />
+        </div>
+        <div>
+          <label class="label" for="docApellidos">Apellidos</label>
+          <input id="docApellidos" class="input" required maxlength="120" />
+        </div>
+      </div>
+      <div>
+        <label class="label" for="docEspecialidad">Especialidad</label>
+        <input id="docEspecialidad" class="input" maxlength="140" placeholder="Ej. Matemática y Física" />
+      </div>
+      <div>
+        <label class="label" for="docTarifa">Tarifa por hora (S/)</label>
+        <input id="docTarifa" type="number" class="input" min="0" max="100000" step="0.01" value="0" placeholder="Ej. 12.00" />
+        <p class="mt-1 text-xs text-slate-400">Se usa para calcular el descuento por tardanza en el apartado Pagos.</p>
+      </div>
+      <div>
+        <label class="label" for="docFoto">Foto (JPG/PNG, máx. 5 MB)</label>
+        <input id="docFoto" type="file" accept="image/*" class="input file:mr-3 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white" />
+      </div>
+      <label class="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300">
+        <input id="docActivo" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-emerald-600" checked />
+        Docente activo
+      </label>
+      <div class="flex gap-2 pt-1">
+        <button type="button" class="btn-soft flex-1" data-cerrar="modalDocente">Cancelar</button>
+        <button type="submit" class="btn-primary flex-1">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================ MODAL TARIFA ============================ -->
+<div id="modalTarifa" class="fixed inset-0 z-[70] hidden items-center justify-center bg-slate-900/60 p-3 backdrop-blur-sm">
+  <div class="card w-full max-w-sm animate-pop p-5">
+    <div class="mb-4 flex items-center justify-between">
+      <h2 class="text-lg font-bold text-slate-900 dark:text-white">Tarifa por hora</h2>
+      <button type="button" class="btn-soft h-9 w-9 !px-0" data-cerrar="modalTarifa">✕</button>
+    </div>
+    <form id="formTarifa" class="space-y-3">
+      <input type="hidden" id="tarifaDocenteId" />
+      <p class="text-sm font-semibold text-slate-600 dark:text-slate-300" id="tarifaDocenteNombre"></p>
+      <div>
+        <label class="label" for="tarifaValor">Monto por hora (S/)</label>
+        <input id="tarifaValor" type="number" class="input" min="0" max="100000" step="0.01" required />
+        <p class="mt-1 text-xs text-slate-400">
+          Ej.: S/ 12.00 por hora. Si llega 20 min tarde a un bloque de 1 hora, se descuenta S/ 4.00.
+        </p>
+      </div>
+      <div class="flex gap-2 pt-1">
+        <button type="button" class="btn-soft flex-1" data-cerrar="modalTarifa">Cancelar</button>
+        <button type="submit" class="btn-primary flex-1">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================ MODAL USUARIO ============================ -->
+<div id="modalUsuario" class="fixed inset-0 z-[70] hidden items-center justify-center bg-slate-900/60 p-3 backdrop-blur-sm">
+  <div class="card w-full max-w-lg animate-pop p-5">
+    <div class="mb-4 flex items-center justify-between">
+      <h2 id="modalUsuarioTitulo" class="text-lg font-bold text-slate-900 dark:text-white">Nueva cuenta</h2>
+      <button type="button" class="btn-soft h-9 w-9 !px-0" data-cerrar="modalUsuario">✕</button>
+    </div>
+    <form id="formUsuario" class="space-y-3">
+      <input type="hidden" id="usrId" />
+      <div>
+        <label class="label" for="usrNombre">Nombre completo</label>
+        <input id="usrNombre" class="input" required maxlength="120" />
+      </div>
+      <div>
+        <label class="label" for="usrEmail">Email</label>
+        <input id="usrEmail" type="email" class="input" required />
+      </div>
+      <div id="grupoPassword">
+        <label class="label" for="usrPassword">Contraseña (mín. 6 caracteres)</label>
+        <input id="usrPassword" type="password" class="input" minlength="6" />
+      </div>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div>
+          <span class="label">Rol</span>
+          <p
+            id="usrRolTexto"
+            class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+          >
+            Secretaría / Administrativo
+          </p>
+        </div>
+        <div class="flex items-end">
+          <label class="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300">
+            <input id="usrActivo" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-emerald-600" checked />
+            Cuenta activa
+          </label>
+        </div>
+      </div>
+      <p id="usrAviso" class="hidden rounded-xl bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"></p>
+      <div class="flex gap-2 pt-1">
+        <button type="button" class="btn-soft flex-1" data-cerrar="modalUsuario">Cancelar</button>
+        <button type="submit" class="btn-primary flex-1">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================ MODAL CREDENCIAL ============================ -->
+<div id="modalCredencial" class="fixed inset-0 z-[70] hidden items-center justify-center bg-slate-900/60 p-3 backdrop-blur-sm">
+  <div class="card max-h-[92vh] w-full max-w-md animate-pop overflow-y-auto p-5">
+    <div class="mb-3 flex items-center justify-between">
+      <h2 id="credNombre" class="text-base font-bold text-slate-900 dark:text-white">Credencial</h2>
+      <button type="button" class="btn-soft h-9 w-9 !px-0" data-cerrar="modalCredencial">✕</button>
+    </div>
+    <img
+      id="credImg"
+      alt="Credencial del docente"
+      class="mx-auto block max-h-[58vh] w-auto max-w-full rounded-xl border border-slate-200 dark:border-slate-800"
+    />
+    <div class="mt-3 grid gap-2">
+      <a id="credDescargar" href="#" download class="btn-dark w-full">Descargar PNG</a>
+      <p class="text-center text-xs text-slate-400">
+        El docente la guarda como captura de pantalla y la muestra con el brillo al máximo.
+      </p>
+      {% set wa_extra = 'w-full' %}
+      {% include "partials/whatsapp.html" %}
+    </div>
+  </div>
+</div>
+{% endblock %}

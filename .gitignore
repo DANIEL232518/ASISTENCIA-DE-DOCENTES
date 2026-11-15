@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Node (solo utilería de build de Tailwind)
+node_modules/
+frontend/node_modules/
+
+# Artefactos generados
+app/static/css/tailwind.css
+app/static/uploads/
+app/static/credenciales/
+app/static/img/icon-*.png
+app/static/img/favicon.png
+app/static/img/avatar_*.png
+*.xlsx
+
+# Sistema
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{% block title %}{{ title }}{% endblock %} · Neurociencias</title>
+    <meta name="description" content="PWA de control de asistencia docente de Neurociencias con escaneo QR, programación de horarios y reportes Excel." />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Neurociencias" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" href="/static/img/favicon.png" />
+    <link rel="apple-touch-icon" href="/static/img/icon-192.png" />
+    <link rel="stylesheet" href="/static/css/tailwind.css?v={{ asset_v }}" />
+    <script>
+      // Tema antes del primer render para evitar destellos (FOUC)
+      (function () {
+        try {
+          var t = localStorage.getItem('tema');
+          if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body class="min-h-screen">
+    {% block content %}{% endblock %}
+
+    <div id="toasts" class="pointer-events-none fixed inset-x-0 top-3 z-[80] flex flex-col items-center gap-2 px-3"></div>
+
+    <script src="/static/vendor/html5-qrcode.js?v={{ asset_v }}" defer></script>
+    <script src="/static/js/app.js?v={{ asset_v }}" defer></script>
+    {% block scripts %}{% endblock %}
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          // updateViaCache:'none' evita que el navegador sirva un sw.js cacheado,
+          // así los despliegues nuevos se detectan de inmediato.
+          navigator.serviceWorker
+            .register('/sw.js', { updateViaCache: 'none' })
+            .catch(function () {});
+        });
+      }
+    </script>
+  </body>
+</html>

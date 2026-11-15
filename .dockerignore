@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.git/
+.gitignore
+README.md
+*.xlsx
+.env
+node_modules/
+frontend/node_modules/
+app/static/uploads/
+app/static/credenciales/
+app/static/css/tailwind.css
+pgdata/
+.vscode/
+.idea/

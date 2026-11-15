@@ -1,0 +1,15 @@
+{
+  "name": "asistencia-docente-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Build de utileria (Tailwind CSS + html5-qrcode) para la PWA de asistencia docente",
+  "scripts": {
+    "build:css": "tailwindcss -c frontend/tailwind.config.js -i app/static/css/input.css -o app/static/css/tailwind.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "3.4.17"
+  },
+  "dependencies": {
+    "html5-qrcode": "2.3.8"
+  }
+}

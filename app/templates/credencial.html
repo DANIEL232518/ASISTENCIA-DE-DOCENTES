@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Mi credencial{% endblock %}
+
+{% block content %}
+<div class="mx-auto flex min-h-screen max-w-2xl flex-col px-4 py-8">
+  <header class="mb-6 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white dark:bg-emerald-600">
+        <svg viewBox="0 0 24 24" class="h-6 w-6 fill-current" aria-hidden="true">
+          <path d="M3 3h8v8H3V3Zm2 2v4h4V5H5Zm8-2h8v8h-8V3Zm2 2v4h4V5h-4ZM3 13h8v8H3v-8Zm2 2v4h4v-4H5Zm8-2h3v3h-3v-3Zm5 0h3v3h-3v-3Zm-5 5h3v3h-3v-3Zm5 0h3v3h-3v-3Z" />
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-lg font-extrabold text-slate-900 dark:text-white">Consulta de credencial</h1>
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400">Verificación pública del código de ingreso</p>
+      </div>
+    </div>
+    <a href="/" class="btn-soft !px-3 text-xs">Ir a la app</a>
+  </header>
+
+  {% if encontrado %}
+  <div class="card p-5">
+    <div class="mb-4 flex items-center gap-4">
+      {% if docente.foto_path %}
+      <img src="{{ docente.foto_path }}" alt="{{ docente.nombre_completo }}" class="h-20 w-20 rounded-2xl object-cover ring-2 ring-emerald-500/40" />
+      {% endif %}
+      <div class="min-w-0">
+        <p class="truncate text-lg font-extrabold text-slate-900 dark:text-white">{{ docente.nombre_completo }}</p>
+        <p class="truncate text-sm font-medium text-slate-500 dark:text-slate-400">{{ docente.especialidad or 'Docente' }}</p>
+        <p class="mt-1 font-mono text-sm font-bold text-emerald-600 dark:text-emerald-400">{{ docente.qr_token }}</p>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-3 text-center">
+      <div class="stat">
+        <p class="stat-value text-base">{{ 'Activo' if docente.activo else 'Inactivo' }}</p>
+        <p class="stat-label">Estado</p>
+      </div>
+      <div class="stat">
+        <p class="stat-value text-base">{{ docente.qr_vigencia.strftime('%d/%m/%Y') }}</p>
+        <p class="stat-label">QR vigente hasta</p>
+      </div>
+    </div>
+    <img
+      src="/api/docentes/{{ docente.id }}/credencial"
+      alt="Credencial digital de {{ docente.nombre_completo }}"
+      class="mt-4 w-full rounded-2xl border border-slate-200 dark:border-slate-800"
+    />
+    <a href="/api/docentes/{{ docente.id }}/credencial" download class="btn-dark mt-3 w-full">Descargar mi credencial (PNG)</a>
+    <button type="button" id="btnQrGrande" class="btn-primary mt-2 w-full">Mostrar solo el QR (para escanear)</button>
+    <p class="mt-3 text-xs text-slate-400">
+      Guarda tu credencial como <strong>captura de pantalla</strong> en el celular. Al llegar a
+      Neurociencias, muéstrala (o usa el botón de arriba) con el brillo de la pantalla al máximo.
+    </p>
+  </div>
+
+  {# QR a pantalla completa: fondo blanco y máximo tamaño para que el lector lo capture rápido #}
+  <div
+    id="qrGrande"
+    class="fixed inset-0 z-[90] hidden flex-col items-center justify-center gap-3 bg-white p-4"
+  >
+    <img
+      src="/api/docentes/{{ docente.id }}/qr"
+      alt="Código QR de {{ docente.nombre_completo }}"
+      class="w-full"
+      style="max-width: min(88vw, 68vh)"
+    />
+    <p class="text-center text-sm font-bold text-slate-700">
+      {{ docente.nombre_completo }} · {{ docente.qr_token }}
+    </p>
+    <p class="text-center text-xs text-slate-500">Sube el brillo de tu pantalla al máximo</p>
+    <button type="button" id="cerrarQrGrande" class="btn-dark">Cerrar</button>
+  </div>
+  {% else %}
+  <div class="card p-6">
+    {% if token %}
+    <p class="mb-4 rounded-xl bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+      No encontramos el código <span class="font-mono">{{ token }}</span>. Verifica con Dirección.
+    </p>
+    {% endif %}
+    <form method="get" action="/mi-credencial" class="space-y-3">
+      <div>
+        <label class="label" for="token">Código de ingreso (está impreso en tu credencial)</label>
+        <input id="token" name="token" class="input font-mono uppercase" placeholder="DOC-XXXXXXXX" required />
+      </div>
+      <button class="btn-primary w-full" type="submit">Consultar credencial</button>
+    </form>
+    <p class="mt-4 text-xs text-slate-400">
+      También puedes escanear el QR de tu fotocheck con la cámara de tu celular.
+    </p>
+  </div>
+  {% endif %}
+
+  <div class="mt-4">
+    {% set wa_extra = 'w-full' %}
+    {% include "partials/whatsapp.html" %}
+  </div>
+
+  <footer class="mt-8 text-center text-xs text-slate-400">
+    Neurociencias · Control de Asistencia Docente · PWA v1.0
+  </footer>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Alterna el QR a pantalla completa (máximo contraste para el escáner).
+  (function () {
+    var overlay = document.getElementById('qrGrande');
+    var abrir = document.getElementById('btnQrGrande');
+    var cerrar = document.getElementById('cerrarQrGrande');
+    if (!overlay || !abrir) return;
+
+    function mostrar(visible) {
+      overlay.classList.toggle('hidden', !visible);
+      overlay.classList.toggle('flex', visible);
+      document.body.style.overflow = visible ? 'hidden' : '';
+    }
+
+    abrir.addEventListener('click', function () { mostrar(true); });
+    if (cerrar) cerrar.addEventListener('click', function () { mostrar(false); });
+    overlay.addEventListener('click', function (evento) {
+      if (evento.target === overlay) mostrar(false);
+    });
+    document.addEventListener('keydown', function (evento) {
+      if (evento.key === 'Escape') mostrar(false);
+    });
+  })();
+</script>
+{% endblock %}
