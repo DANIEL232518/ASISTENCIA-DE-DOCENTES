@@ -456,7 +456,7 @@
         <form id="formEvento" class="space-y-3">
           <div>
             <label class="label" for="evTitulo">Título</label>
-            <input id="evTitulo" class="input" required maxlength="160" placeholder="Ej. Jornada de reforzamiento" />
+            <input id="evTitulo" class="input" required minlength="3" maxlength="160" placeholder="Ej. Jornada de reforzamiento" />
           </div>
           <div class="grid gap-3 sm:grid-cols-2">
             <div>
@@ -489,7 +489,7 @@
         <form id="formRecurrente" class="space-y-3">
           <div>
             <label class="label" for="recTitulo">Título</label>
-            <input id="recTitulo" class="input" required maxlength="160" placeholder="Ej. Ingreso turno mañana" />
+            <input id="recTitulo" class="input" required minlength="3" maxlength="160" placeholder="Ej. Ingreso turno mañana" />
           </div>
           <div>
             <span class="label">Días de la semana</span>
@@ -690,11 +690,11 @@
       <div class="grid gap-3 sm:grid-cols-2">
         <div>
           <label class="label" for="docNombres">Nombres</label>
-          <input id="docNombres" class="input" required maxlength="120" />
+          <input id="docNombres" class="input" required minlength="2" maxlength="120" />
         </div>
         <div>
           <label class="label" for="docApellidos">Apellidos</label>
-          <input id="docApellidos" class="input" required maxlength="120" />
+          <input id="docApellidos" class="input" required minlength="2" maxlength="120" />
         </div>
       </div>
       <div>
