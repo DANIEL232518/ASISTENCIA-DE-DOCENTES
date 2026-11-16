@@ -183,6 +183,12 @@ def _cargar_foto(foto_path: str | None, iniciales: str, caja: tuple[int, int]) -
             ruta = Path(foto_path)
     if ruta:
         try:
+            try:
+                from pillow_heif import register_heif_opener
+
+                register_heif_opener()
+            except Exception:  # noqa: BLE001
+                pass
             foto = Image.open(ruta).convert("RGB")
             # recorte centrado tipo "cover"
             w, h = foto.size
@@ -260,7 +266,7 @@ def generar_credencial(docente, guardar_en: Path | None = None) -> Path:
     _centrado(d, "Credencial docente · Control de asistencia", _fuente(24), 118, "#94a3b8")
 
     # --- Foto ---------------------------------------------------------------
-    foto_tam = 240
+    foto_tam = 320
     foto = _cargar_foto(
         getattr(docente, "foto_path", ""), docente.iniciales, (foto_tam, foto_tam)
     )
@@ -292,7 +298,7 @@ def generar_credencial(docente, guardar_en: Path | None = None) -> Path:
     _centrado(d, docente.qr_token, _fuente(40, negrita=True), y + 46, COL_TINTA)
 
     # --- QR grande (lo que realmente se escanea) ---------------------------
-    qr_tam, qr_y = 740, 880
+    qr_tam, qr_y = 740, 960
     qr_x = (_ANCHO - qr_tam) // 2
     d.rectangle(
         [qr_x - 30, qr_y - 30, qr_x + qr_tam + 30, qr_y + qr_tam + 30],

@@ -481,6 +481,39 @@ async def desactivar_docente(
     return {"ok": True, "mensaje": f"{docente.nombre_completo} quedó desactivado."}
 
 
+@app.delete("/api/docentes/{docente_id}/eliminar", tags=["docentes"])
+async def eliminar_docente(
+    docente_id: int,
+    db: AsyncSession = Depends(get_db),
+    _u: Usuario = Depends(requiere_directora),
+) -> dict:
+    """Eliminación permanente del docente (y de sus asistencias)."""
+    docente = await db.get(Docente, docente_id)
+    if docente is None:
+        raise HTTPException(status_code=404, detail="Docente no encontrado.")
+
+    nombre = docente.nombre_completo
+    # Limpieza de archivos en disco (best-effort)
+    for rel in (
+        docente.foto_path,
+        f"/static/uploads/avatares/avatar_{docente.id}.png",
+        f"/static/credenciales/credencial_{docente.id}.png",
+        f"/static/credenciales/qr_{docente.id}.png",
+    ):
+        if not rel:
+            continue
+        try:
+            ruta = BASE_DIR / rel.lstrip("/").replace("/", os.sep)
+            if ruta.exists():
+                ruta.unlink()
+        except OSError:
+            logger.warning("No se pudo borrar el archivo %s", rel)
+
+    await db.delete(docente)
+    await db.commit()
+    return {"ok": True, "mensaje": f"{nombre} fue eliminado permanentemente."}
+
+
 @app.put("/api/docentes/{docente_id}/foto", tags=["docentes"])
 async def subir_foto(
     docente_id: int,
@@ -501,23 +534,43 @@ async def subir_foto(
     def _procesar() -> str:
         from io import BytesIO
 
-        from PIL import Image, ImageOps
+        from PIL import Image, ImageOps, UnidentifiedImageError
 
-        img = Image.open(BytesIO(contenido))
-        # Las fotos del celular traen la orientación en EXIF: sin esto quedan
-        # giradas al guardarlas y en la credencial.
-        img = ImageOps.exif_transpose(img).convert("RGB")
-        # Recorte cuadrado centrado + reescalado (máx 900px)
-        lado = min(img.size)
-        izq = (img.width - lado) // 2
-        top = (img.height - lado) // 2
-        img = img.crop((izq, top, izq + lado, top + lado))
-        if lado > 900:
-            img = img.resize((900, 900), Image.LANCZOS)
-        destino = utils_qr.UPLOAD_DIR / f"{docente.id}.jpg"
-        destino.parent.mkdir(parents=True, exist_ok=True)
-        img.save(destino, format="JPEG", quality=88, optimize=True)
-        return f"/static/uploads/docentes/{docente.id}.jpg"
+        try:
+            from pillow_heif import register_heif_opener
+
+            register_heif_opener()
+        except Exception:  # noqa: BLE001 - opcional, no rompe si no está disponible
+            pass
+
+        try:
+            img = Image.open(BytesIO(contenido))
+        except UnidentifiedImageError:
+            raise HTTPException(
+                status_code=400,
+                detail="El archivo no es una imagen válida. Usa JPG o PNG (las fotos HEIC de iPhone también se aceptan).",
+            )
+        try:
+            # Las fotos del celular traen la orientación en EXIF: sin esto quedan
+            # giradas al guardarlas y en la credencial.
+            img = ImageOps.exif_transpose(img).convert("RGB")
+            # Recorte cuadrado centrado + reescalado (máx 900px)
+            lado = min(img.size)
+            izq = (img.width - lado) // 2
+            top = (img.height - lado) // 2
+            img = img.crop((izq, top, izq + lado, top + lado))
+            if lado > 900:
+                img = img.resize((900, 900), Image.LANCZOS)
+            destino = utils_qr.UPLOAD_DIR / f"{docente.id}.jpg"
+            destino.parent.mkdir(parents=True, exist_ok=True)
+            img.save(destino, format="JPEG", quality=88, optimize=True)
+            return f"/static/uploads/docentes/{docente.id}.jpg"
+        except Exception as exc:  # noqa: BLE001 - cualquier fallo de imagen -> 400 amigable
+            logger.warning("No se pudo procesar la imagen del docente %s: %s", docente.id, exc)
+            raise HTTPException(
+                status_code=400,
+                detail="No se pudo procesar la imagen. Asegúrate de enviar una foto válida en JPG o PNG.",
+            )
 
     docente.foto_path = await run_in_threadpool(_procesar)
     await db.commit()
@@ -1376,6 +1429,29 @@ async def desactivar_usuario(
     objetivo.activo = False
     await db.commit()
     return {"ok": True, "mensaje": f"{objetivo.nombre} quedó desactivado."}
+
+
+@app.delete("/api/usuarios/{usuario_id}/eliminar", tags=["usuarios"])
+async def eliminar_usuario(
+    usuario_id: int,
+    db: AsyncSession = Depends(get_db),
+    usuario: Usuario = Depends(requiere_directora),
+) -> dict:
+    """Eliminación permanente de una cuenta (solo Secretaría/Administrativo)."""
+    objetivo = await db.get(Usuario, usuario_id)
+    if objetivo is None:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+    if objetivo.rol == ROL_DIRECTORA:
+        raise HTTPException(
+            status_code=409,
+            detail="La cuenta de Dirección no se puede eliminar.",
+        )
+    if objetivo.id == usuario.id:
+        raise HTTPException(status_code=400, detail="No puedes eliminar tu propia cuenta.")
+    nombre = objetivo.nombre
+    await db.delete(objetivo)
+    await db.commit()
+    return {"ok": True, "mensaje": f"{nombre} fue eliminado permanentemente."}
 
 
 # ===========================================================================

@@ -39,7 +39,7 @@ WORKDIR $APP_HOME
 
 # Fuentes para las credenciales PNG + tzdata para America/Lima
 RUN apt-get update \
- && apt-get install -y --no-install-recommends fonts-dejavu-core tzdata \
+ && apt-get install -y --no-install-recommends fonts-dejavu-core tzdata libheif-dev libde265-dev \
  && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .

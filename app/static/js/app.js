@@ -1423,7 +1423,8 @@ async function cargarDocentes() {
                  d.activo
                    ? `<button class="btn-soft !px-3 !py-1.5 text-xs !text-rose-600" data-baja-docente="${d.id}">Desactivar</button>`
                    : `<button class="btn-soft !px-3 !py-1.5 text-xs !text-emerald-600" data-alta-docente="${d.id}">Reactivar</button>`
-               }`
+               }
+               <button class=\"btn-soft !px-3 !py-1.5 text-xs !text-rose-700\" data-eliminar-docente=\"${d.id}\" data-nombre=\"${esc(d.nombre_completo)}\">Eliminar</button>`
             : ''
         }
       </div>
@@ -1464,6 +1465,20 @@ async function cargarDocentes() {
       try {
         await api(`/api/docentes/${btn.dataset.altaDocente}`, { method: 'PUT', body: { activo: true } });
         toast('Docente reactivado.', 'ok');
+        cargarDocentes();
+      } catch (e) {
+        toast(e.message, 'error');
+      }
+    });
+  });
+
+  $$('[data-eliminar-docente]', lista).forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const nombre = btn.dataset.nombre || 'este docente';
+      if (!confirm(`¿Eliminar permanentemente a ${nombre}? Se borrarán también sus asistencias y credenciales.`)) return;
+      try {
+        const r = await api(`/api/docentes/${btn.dataset.eliminarDocente}/eliminar`, { method: 'DELETE' });
+        toast(r.mensaje, 'ok');
         cargarDocentes();
       } catch (e) {
         toast(e.message, 'error');
@@ -1612,9 +1627,10 @@ async function cargarUsuarios() {
       const esDireccion = u.rol === 'DIRECTORA';
       const acciones = esDireccion
         ? `<span class="text-xs font-semibold text-slate-400" title="La cuenta de Dirección no se puede eliminar ni desactivar">Protegida</span>`
-        : u.activo
-          ? `<button class="btn-soft !px-2 !py-1 text-xs !text-rose-600" data-baja-usuario="${u.id}">Desactivar</button>`
-          : `<button class="btn-soft !px-2 !py-1 text-xs !text-emerald-600" data-alta-usuario="${u.id}">Activar</button>`;
+        : `<button class="btn-soft !px-2 !py-1 text-xs !text-rose-600" data-eliminar-usuario="${u.id}" data-nombre="${esc(u.nombre)}">Eliminar</button>
+           ${u.activo
+             ? `<button class="btn-soft !px-2 !py-1 text-xs !text-rose-500" data-baja-usuario="${u.id}">Desactivar</button>`
+             : `<button class="btn-soft !px-2 !py-1 text-xs !text-emerald-600" data-alta-usuario="${u.id}">Activar</button>`}`;
       return `
     <tr>
       <td class="td font-semibold">${esc(u.nombre)}</td>
@@ -1671,6 +1687,19 @@ async function cargarUsuarios() {
   $$('[data-alta-usuario]', tbody).forEach((btn) =>
     btn.addEventListener('click', () => cambiarEstado(btn.dataset.altaUsuario, true))
   );
+  $$('[data-eliminar-usuario]', tbody).forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const nombre = btn.dataset.nombre || 'esta cuenta';
+      if (!confirm(`¿Eliminar permanentemente la cuenta de ${nombre}?`)) return;
+      try {
+        await api(`/api/usuarios/${btn.dataset.eliminarUsuario}/eliminar`, { method: 'DELETE' });
+        toast('Cuenta eliminada.', 'ok');
+        cargarUsuarios();
+      } catch (e) {
+        toast(e.message, 'error');
+      }
+    });
+  });
 }
 
 function enlazarUsuarios() {

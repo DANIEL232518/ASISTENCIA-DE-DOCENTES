@@ -29,8 +29,8 @@ Cuando el log muestre `Aplicación lista en http://localhost:8000`, abre:
 
 | Rol | Email | Contraseña | Permisos |
 |---|---|---|---|
-| **DIRECTORA** (Dirección) | `directora@academia.pe` | `Directora123` | Acceso total: crear/editar/activar/desactivar docentes, gestionar cuentas, programación, escaneo, edición de historial y reportes |
-| **ADMIN** (Secretaría / Administrativo) | `admin@academia.pe` | `Admin123` | Escanear QR, crear eventos espontáneos del día y ver el historial del día |
+| **DIRECTORA** (Dirección) | `directora@academia.pe` | `Directora123` *(cámbiala en producción)* | Acceso total... |
+| **ADMIN** (Secretaría / Administrativo) | `admin@academia.pe` | `Admin123` *(cámbiala en producción)* | Escanear QR... |
 
 > La cuenta de **Dirección** es única e intransferible: **no se puede eliminar ni desactivar** desde
 > la aplicación (el backend responde `409`). El nombre inicial de la Directora es **Nayeli Villafan**.
