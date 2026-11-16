@@ -261,9 +261,19 @@ def generar_credencial(docente, guardar_en: Path | None = None) -> Path:
 
     # --- Cabecera -----------------------------------------------------------
     d.rectangle([0, 0, _ANCHO, 190], fill=COL_TINTA)
+    # Logo de la academia (si está disponible)
+    try:
+        logo = Image.open(IMG_DIR / "logo.png").convert("RGBA")
+        alto_logo = 70
+        ancho_logo = int(logo.width * alto_logo / logo.height)
+        logo = logo.resize((ancho_logo, alto_logo), Image.LANCZOS)
+        x_logo = (_ANCHO - ancho_logo) // 2
+        lienzo.paste(logo, (x_logo, 18), mask=logo.split()[3])
+    except Exception:  # noqa: BLE001
+        pass
     d.rectangle([0, 190, _ANCHO, 200], fill=COL_ACENTO)
-    _centrado(d, "NEUROCIENCIAS", _fuente(44, negrita=True), 52, COL_BLANCO)
-    _centrado(d, "Credencial docente · Control de asistencia", _fuente(24), 118, "#94a3b8")
+    _centrado(d, "NEUROCIENCIAS", _fuente(40, negrita=True), 95, COL_BLANCO)
+    _centrado(d, "Credencial docente · Control de asistencia", _fuente(22), 145, "#94a3b8")
 
     # --- Foto ---------------------------------------------------------------
     foto_tam = 320
@@ -330,44 +340,64 @@ def generar_credencial(docente, guardar_en: Path | None = None) -> Path:
 
 
 def generar_iconos_pwa() -> dict[str, str]:
-    """Crea icon-192.png / icon-512.png y un favicon (estilo QR) en /static/img."""
+    """Crea icon-192.png / icon-512.png y un favicon en /static/img a partir del logo."""
     _asegurar_dirs()
     rutas: dict[str, str] = {}
+    logo_path = IMG_DIR / "logo.png"
     for tam in (192, 512):
-        img = Image.new("RGB", (tam, tam), COL_TINTA)
-        d = ImageDraw.Draw(img)
-        margen = int(tam * 0.14)
-        celda = (tam - margen * 2) // 5
-        patron = [
-            "11111",
-            "10001",
-            "10101",
-            "10001",
-            "11111",
-        ]
-        # esquinas tipo QR
-        for fila in range(5):
-            for col in range(5):
-                if patron[fila][col] == "1":
-                    x = margen + col * celda
-                    y = margen + fila * celda
-                    d.rectangle([x + 2, y + 2, x + celda - 3, y + celda - 3], fill=COL_BLANCO)
-        # acento central
-        d.rectangle(
-            [
-                tam // 2 - int(tam * 0.11),
-                tam // 2 - int(tam * 0.11),
-                tam // 2 + int(tam * 0.11),
-                tam // 2 + int(tam * 0.11),
-            ],
-            fill=COL_ACENTO,
-        )
+        img = Image.new("RGB", (tam, tam), COL_BLANCO)
+        if logo_path.exists():
+            try:
+                logo = Image.open(logo_path).convert("RGBA")
+                lado = int(tam * 0.78)
+                ratio = min(lado / logo.width, lado / logo.height)
+                nw, nh = int(logo.width * ratio), int(logo.height * ratio)
+                logo = logo.resize((nw, nh), Image.LANCZOS)
+                x = (tam - nw) // 2
+                y = (tam - nh) // 2
+                img.paste(logo, (x, y), mask=logo.split()[3])
+            except Exception:  # noqa: BLE001
+                img = Image.new("RGB", (tam, tam), COL_TINTA)
+        else:
+            img = Image.new("RGB", (tam, tam), COL_TINTA)
+            d = ImageDraw.Draw(img)
+            margen = int(tam * 0.14)
+            celda = (tam - margen * 2) // 5
+            patron = ["11111", "10001", "10101", "10001", "11111"]
+            for fila in range(5):
+                for col in range(5):
+                    if patron[fila][col] == "1":
+                        x = margen + col * celda
+                        y = margen + fila * celda
+                        d.rectangle([x + 2, y + 2, x + celda - 3, y + celda - 3], fill=COL_BLANCO)
+            d.rectangle(
+                [tam // 2 - int(tam * 0.11), tam // 2 - int(tam * 0.11),
+                 tam // 2 + int(tam * 0.11), tam // 2 + int(tam * 0.11)],
+                fill=COL_ACENTO,
+            )
         nombre = f"icon-{tam}.png"
         img.save(IMG_DIR / nombre, format="PNG", optimize=True)
         rutas[f"icon-{tam}"] = f"/static/img/{nombre}"
 
-    favicon = generar_favicon()
-    rutas["favicon"] = favicon
+    fav = Image.new("RGB", (64, 64), COL_BLANCO)
+    if logo_path.exists():
+        try:
+            logo = Image.open(logo_path).convert("RGBA")
+            lado = 52
+            ratio = min(lado / logo.width, lado / logo.height)
+            nw, nh = int(logo.width * ratio), int(logo.height * ratio)
+            logo = logo.resize((nw, nh), Image.LANCZOS)
+            fav.paste(logo, ((64 - nw) // 2, (64 - nh) // 2), mask=logo.split()[3])
+        except Exception:  # noqa: BLE001
+            d = ImageDraw.Draw(fav)
+            d.rectangle([6, 6, 58, 58], outline="#ffffff", width=5)
+            d.rectangle([22, 22, 42, 42], fill=COL_ACENTO)
+    else:
+        d = ImageDraw.Draw(fav)
+        d.rectangle([6, 6, 58, 58], outline="#ffffff", width=5)
+        d.rectangle([22, 22, 42, 42], fill=COL_ACENTO)
+    fav.save(IMG_DIR / "favicon.png", format="PNG", optimize=True)
+    rutas["favicon"] = "/static/img/favicon.png"
     return rutas
 
 
