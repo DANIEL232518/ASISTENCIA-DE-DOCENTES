@@ -290,6 +290,12 @@ def exportar_asistencias(
             bold=True, size=11, color="0F172A"
         )
 
+    # Pie: credito del desarrollador (discreto, al final de la hoja)
+    r_pie = fila_cabecera + len(filas) + 3
+    pie = ws.cell(row=r_pie, column=1, value="Desarrollado por Jhon Daniel Pari Valencia · Contacto 900717074")
+    pie.font = Font(size=9, color="94A3B8", italic=True)
+    pie.alignment = Alignment(horizontal="left", vertical="center")
+
     for i, ancho in enumerate(_ANCHO, start=1):
         ws.column_dimensions[get_column_letter(i)].width = ancho
 
@@ -443,6 +449,12 @@ def exportar_pagos(
                 celda.number_format = _PAGO_MONEY
             if col == 9:
                 celda.number_format = _PAGO_PCT
+
+    # Pie: credito del desarrollador (discreto, al final de la hoja)
+    r_pie = cabecera_filas + len(filas_resumen) + 3
+    pie = ws.cell(row=r_pie, column=1, value="Desarrollado por Jhon Daniel Pari Valencia · Contacto 900717074")
+    pie.font = Font(size=9, color="94A3B8", italic=True)
+    pie.alignment = Alignment(horizontal="left", vertical="center")
 
     for i, ancho in enumerate(_PAGO_ANCHO_RESUMEN, start=1):
         ws.column_dimensions[get_column_letter(i)].width = ancho

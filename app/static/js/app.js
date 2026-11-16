@@ -150,14 +150,7 @@ async function api(ruta, opciones = {}) {
     data = await resp.text();
   }
   if (!resp.ok) {
-    let detalle = (data && (data.detail || data.message)) || `Error ${resp.status}`;
-    if (Array.isArray(detalle)) {
-      // Errores de validación de FastAPI: se aplanan a texto legible.
-      detalle = detalle
-        .map((d) => (d && d.msg ? String(d.msg).replace(/^Value error,\s*/, '') : ''))
-        .filter(Boolean)
-        .join(' · ') || 'Solicitud rechazada';
-    }
+    const detalle = (data && (data.detail || data.message)) || `Error ${resp.status}`;
     // Un 401 en el propio login NO es una sesión expirada: es una contraseña
     // incorrecta y la pantalla de login debe mostrar el mensaje, no redirigir.
     const esLogin = ruta === '/api/auth/login';
@@ -1289,57 +1282,22 @@ function enlazarProgramacion() {
   if (formEvento) {
     formEvento.addEventListener('submit', async (ev) => {
       ev.preventDefault();
-      const titulo = $('#evTitulo').value.trim();
-      const fecha = $('#evFecha').value;
-      const inicio = valorHora('#evInicio');
-      const fin = valorHora('#evFin');
-      const tolerancia = Number($('#evTolerancia').value || 5);
-
-      // Validación en el cliente: evita el 422 del servidor y explica el problema.
-      if (titulo.length < 3) {
-        toast('El título debe tener al menos 3 caracteres.', 'warn');
-        $('#evTitulo').focus();
-        return;
-      }
-      if (!fecha) {
-        toast('Selecciona la fecha del evento.', 'warn');
-        $('#evFecha').focus();
-        return;
-      }
-      if (!inicio || !fin) {
-        toast('Completa la hora de inicio y la hora de fin.', 'warn');
-        return;
-      }
-      if (fin <= inicio) {
-        toast('La hora de fin debe ser posterior a la hora de inicio.', 'warn');
-        $('#evFin').focus();
-        return;
-      }
-      if (!Number.isFinite(tolerancia) || tolerancia < 0 || tolerancia > 120) {
-        toast('La tolerancia debe estar entre 0 y 120 minutos.', 'warn');
-        return;
-      }
-
       try {
         await api('/api/eventos', {
           method: 'POST',
           body: {
-            titulo,
-            fecha,
-            hora_inicio: `${inicio}:00`,
-            hora_fin: `${fin}:00`,
-            tolerancia_minutos: tolerancia,
+            titulo: $('#evTitulo').value.trim(),
+            fecha: $('#evFecha').value,
+            hora_inicio: `${valorHora('#evInicio')}:00`,
+            hora_fin: `${valorHora('#evFin')}:00`,
+            tolerancia_minutos: Number($('#evTolerancia').value || 5),
             es_espontaneo: $('#evEspontaneo').checked,
           },
         });
         toast('Evento creado.', 'ok');
-        // Se limpian los campos, pero se conservan fecha y horas para poder
-        // registrar otro bloque sin volver a digitarlos.
         formEvento.reset();
-        $('#evFecha').value = fecha;
+        $('#evFecha').value = hoyISO();
         $('#evTolerancia').value = 5;
-        $('#evInicio').value = inicio;
-        $('#evFin').value = fin;
         listarEventos();
       } catch (e) {
         toast(e.message, 'error');
@@ -1383,31 +1341,14 @@ function enlazarProgramacion() {
         toast('Selecciona al menos un día de la semana.', 'warn');
         return;
       }
-      const titulo = $('#recTitulo').value.trim();
-      const inicio = valorHora('#recInicio');
-      const fin = valorHora('#recFin');
-      if (titulo.length < 3) {
-        toast('El título debe tener al menos 3 caracteres.', 'warn');
-        $('#recTitulo').focus();
-        return;
-      }
-      if (!inicio || !fin) {
-        toast('Completa la hora de inicio y la hora de fin.', 'warn');
-        return;
-      }
-      if (fin <= inicio) {
-        toast('La hora de fin debe ser posterior a la hora de inicio.', 'warn');
-        $('#recFin').focus();
-        return;
-      }
       try {
         const r = await api('/api/eventos/recurrente', {
           method: 'POST',
           body: {
-            titulo,
+            titulo: $('#recTitulo').value.trim(),
             dias,
-            hora_inicio: `${inicio}:00`,
-            hora_fin: `${fin}:00`,
+            hora_inicio: `${valorHora('#recInicio')}:00`,
+            hora_fin: `${valorHora('#recFin')}:00`,
             tolerancia_minutos: Number($('#recTolerancia').value || 5),
             desde: $('#recDesde').value,
             hasta: $('#recHasta').value,

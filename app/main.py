@@ -23,7 +23,6 @@ from fastapi import (
     UploadFile,
     status,
 )
-from fastapi.exceptions import RequestValidationError
 from fastapi.responses import (
     FileResponse,
     HTMLResponse,
@@ -1532,74 +1531,6 @@ async def logout() -> RedirectResponse:
 # ===========================================================================
 # Manejadores de error
 # ===========================================================================
-_ETIQUETAS_VALIDACION = {
-    "missing": "falta este campo",
-    "string_too_short": "es demasiado corto",
-    "string_too_long": "es demasiado largo",
-    "string_type": "debe ser texto",
-    "int_parsing": "debe ser un número entero",
-    "int_type": "debe ser un número entero",
-    "int_parsing_size": "debe ser un número entero",
-    "float_parsing": "debe ser un número",
-    "bool_type": "debe ser verdadero o falso",
-    "time_parsing": "no es una hora válida",
-    "date_parsing": "no es una fecha válida",
-    "datetime_parsing": "no es una fecha/hora válida",
-    "date_from_datetime_parsing": "no es una fecha válida",
-    "time_from_datetime_parsing": "no es una hora válida",
-    "datetime_from_date_parsing": "no es una fecha/hora válida",
-    "value_error": "el valor no es válido",
-}
-
-
-def _texto_validacion(errores: list[dict]) -> str:
-    """Convierte los errores de Pydantic en un mensaje legible en español."""
-    partes: list[str] = []
-    for err in errores:
-        loc = [str(x) for x in err.get("loc", []) if x not in ("body", "query", "path")]
-        campo = ".".join(loc) or "datos"
-        tipo = str(err.get("type", ""))
-        msg = str(err.get("msg", ""))
-        # Los errores de nuestros validadores ya traen el texto en español.
-        if tipo == "value_error" and msg:
-            partes.append(msg.replace("Value error, ", ""))
-            continue
-        etiqueta = _ETIQUETAS_VALIDACION.get(tipo)
-        if etiqueta is None:
-            if str(msg).startswith("Input should be"):
-                etiqueta = "no es un valor válido"
-            else:
-                partes.append(f"{campo}: {msg}")
-                continue
-        ctx = err.get("ctx") or {}
-        if tipo == "string_too_short" and ctx.get("min_length"):
-            etiqueta = f"debe tener al menos {ctx['min_length']} caracteres"
-        elif tipo == "string_too_long" and ctx.get("max_length"):
-            etiqueta = f"no puede superar {ctx['max_length']} caracteres"
-        partes.append(f"{campo}: {etiqueta}")
-    return "; ".join(partes) or "Los datos enviados no son válidos."
-
-
-@app.exception_handler(RequestValidationError)
-async def manejar_validacion(
-    request: Request, exc: RequestValidationError
-) -> JSONResponse:
-    """422 con un mensaje entendible + registro del cuerpo recibido (diagnóstico)."""
-    texto = _texto_validacion(exc.errors())
-    try:
-        cuerpo = (await request.body()).decode("utf-8", "ignore")[:600]
-    except Exception:  # noqa: BLE001
-        cuerpo = ""
-    logger.warning(
-        "Validación fallida en %s %s -> %s | body: %s",
-        request.method,
-        request.url.path,
-        texto,
-        cuerpo,
-    )
-    return JSONResponse(status_code=422, content={"detail": texto})
-
-
 @app.exception_handler(HTTPException)
 async def manejar_http(request: Request, exc: HTTPException) -> JSONResponse:
     acepta_html = "text/html" in request.headers.get("accept", "")
