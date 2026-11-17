@@ -131,6 +131,41 @@ class Evento(Base):
         return f"<Evento #{self.id} {self.titulo} {self.fecha} {self.hora_inicio}-{self.hora_fin}>"
 
 
+class PagoDocente(Base):
+    """Pago registrado a un docente por un periodo concreto.
+
+    Cada registro agrupa las asistencias que se pagaron en ese momento. Las
+    asistencias quedan marcadas con ``pagado=True`` y el ``pago_id``
+    correspondiente, de modo que dejan de contar como saldo pendiente.
+    """
+
+    __tablename__ = "pagos_docentes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    docente_id: Mapped[int] = mapped_column(
+        ForeignKey("docentes.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    periodo_desde: Mapped[date] = mapped_column(Date, nullable=False)
+    periodo_hasta: Mapped[date] = mapped_column(Date, nullable=False)
+    asistencias: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    bruto: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    descuento: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    neto: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    nota: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    fecha_pago: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow, index=True
+    )
+    registrado_por_id: Mapped[int | None] = mapped_column(
+        ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True
+    )
+
+    docente: Mapped["Docente"] = relationship(lazy="joined")
+    registrado_por: Mapped[Usuario | None] = relationship(lazy="joined")
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"<PagoDocente #{self.id} docente={self.docente_id} S/ {self.neto}>"
+
+
 class Asistencia(Base):
     """Registro de ingreso de un docente en un evento (único por docente+evento)."""
 
@@ -153,10 +188,16 @@ class Asistencia(Base):
     hora_computable: Mapped[time] = mapped_column(Time, nullable=False)
     estado: Mapped[str] = mapped_column(String(20), nullable=False, default=ESTADO_PUNTUAL)
     detalle: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    # Pago: la asistencia nace pendiente y se marca al registrar el pago del periodo.
+    pagado: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
+    pago_id: Mapped[int | None] = mapped_column(
+        ForeignKey("pagos_docentes.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     creado_en: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
 
     evento: Mapped[Evento] = relationship(back_populates="asistencias", lazy="joined")
     docente: Mapped[Docente] = relationship(back_populates="asistencias", lazy="joined")
+    pago: Mapped[PagoDocente | None] = relationship(lazy="joined")
     registrado_por: Mapped[Usuario | None] = relationship(
         back_populates="asistencias_registradas", lazy="joined"
     )

@@ -60,6 +60,7 @@ from .models import (
     Asistencia,
     Docente,
     Evento,
+    PagoDocente,
     Usuario,
 )
 from .seed import seed
@@ -179,6 +180,26 @@ async def arrancar() -> None:
                 "ALTER TABLE docentes "
                 "ADD COLUMN IF NOT EXISTS tarifa_por_hora FLOAT NOT NULL DEFAULT 0"
             )
+        )
+        # Pago de asistencias: columnas añadidas junto con la tabla pagos_docentes.
+        await conn.execute(
+            text(
+                "ALTER TABLE asistencias "
+                "ADD COLUMN IF NOT EXISTS pagado BOOLEAN NOT NULL DEFAULT FALSE"
+            )
+        )
+        await conn.execute(
+            text(
+                "ALTER TABLE asistencias "
+                "ADD COLUMN IF NOT EXISTS pago_id INTEGER "
+                "REFERENCES pagos_docentes(id) ON DELETE SET NULL"
+            )
+        )
+        await conn.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_asistencias_pagado ON asistencias (pagado)")
+        )
+        await conn.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_asistencias_pago_id ON asistencias (pago_id)")
         )
     await seed()
     logger.info("Aplicación lista en %s", os.getenv("BASE_URL", "http://localhost:8000"))
@@ -1213,6 +1234,9 @@ async def _calcular_pagos(
                 "docente_id": docente.id,
                 "docente_nombre": docente.nombre_completo,
                 "docente_foto": docente.foto_path,
+                "pagado": bool(a.pagado),
+                "pago_id": a.pago_id,
+                "fecha_pago": a.pago.fecha_pago if a.pago else None,
             }
         )
 
@@ -1231,6 +1255,8 @@ async def _calcular_pagos(
                 "bruto": Decimal("0"),
                 "descuento": Decimal("0"),
                 "neto": Decimal("0"),
+                "pagado": Decimal("0"),
+                "fecha_pago": None,
             },
         )
         r["asistencias"] += 1
@@ -1242,14 +1268,24 @@ async def _calcular_pagos(
         r["bruto"] += pago.bruto
         r["descuento"] += pago.descuento
         r["neto"] += pago.neto
+        if a.pagado:
+            r["pagado"] += pago.neto
+            if a.pago and (r["fecha_pago"] is None or a.pago.fecha_pago > r["fecha_pago"]):
+                r["fecha_pago"] = a.pago.fecha_pago
 
     filas_resumen: list[dict] = []
     for r in resumen.values():
         bruto = r["bruto"]
         descuento = r["descuento"]
+        neto = float(r["neto"])
+        pagado = float(r["pagado"])
         r["bruto"] = float(bruto)
         r["descuento"] = float(descuento)
-        r["neto"] = float(r["neto"])
+        r["neto"] = neto
+        r["pagado"] = pagado
+        # Lo que aún no se ha pagado es el saldo pendiente del docente.
+        r["pendiente"] = round(max(0.0, neto - pagado), 2)
+        r["todo_pagado"] = neto > 0 and r["pendiente"] <= 0
         r["descuento_porcentaje"] = (
             round(float(descuento / bruto * Decimal(100)), 2) if bruto > 0 else 0.0
         )
@@ -1260,6 +1296,7 @@ async def _calcular_pagos(
     total_bruto = sum((Decimal(str(x["bruto"])) for x in filas_resumen), Decimal("0"))
     total_descuento = sum((Decimal(str(x["descuento"])) for x in filas_resumen), Decimal("0"))
     total_neto = sum((Decimal(str(x["neto"])) for x in filas_resumen), Decimal("0"))
+    total_pagado = sum((Decimal(str(x["pagado"])) for x in filas_resumen), Decimal("0"))
 
     totales = {
         "asistencias": len(detalle),
@@ -1268,9 +1305,46 @@ async def _calcular_pagos(
         "bruto": float(total_bruto),
         "descuento": float(total_descuento),
         "neto": float(total_neto),
+        "pagado": float(total_pagado),
+        "pendiente": round(float(total_neto - total_pagado), 2),
     }
 
-    return {"detalle": detalle, "resumen": filas_resumen, "totales": totales}
+    # Pagos registrados dentro del periodo consultado (para poder anularlos).
+    stmt_pagos = (
+        select(PagoDocente)
+        .where(
+            PagoDocente.fecha_pago >= datetime.combine(fecha_desde, time.min),
+            PagoDocente.fecha_pago
+            < datetime.combine(fecha_hasta + timedelta(days=1), time.min),
+        )
+        .order_by(PagoDocente.fecha_pago.desc())
+    )
+    if docente_id:
+        stmt_pagos = stmt_pagos.where(PagoDocente.docente_id == docente_id)
+    pagos = (await db.scalars(stmt_pagos)).unique().all()
+    registros = [
+        {
+            "id": p.id,
+            "docente_id": p.docente_id,
+            "docente_nombre": p.docente.nombre_completo if p.docente else "",
+            "periodo_desde": p.periodo_desde,
+            "periodo_hasta": p.periodo_hasta,
+            "asistencias": p.asistencias,
+            "bruto": float(p.bruto or 0),
+            "descuento": float(p.descuento or 0),
+            "neto": float(p.neto or 0),
+            "fecha_pago": p.fecha_pago,
+            "nota": p.nota or "",
+        }
+        for p in pagos
+    ]
+
+    return {
+        "detalle": detalle,
+        "resumen": filas_resumen,
+        "totales": totales,
+        "pagos": registros,
+    }
 
 
 def _rango_de_pagos(desde: Optional[date], hasta: Optional[date]) -> tuple[date, date]:
@@ -1304,7 +1378,100 @@ async def obtener_pagos(
         totales=schemas.PagoTotalesOut(**datos["totales"]),
         resumen=[schemas.PagoDocenteOut(**f) for f in datos["resumen"]],
         detalle=[schemas.PagoDetalleOut(**f) for f in datos["detalle"]],
+        pagos=[schemas.PagoRegistroOut(**p) for p in datos["pagos"]],
     )
+
+
+@app.post("/api/pagos/pagar", response_model=schemas.PagoRegistroOut, tags=["pagos"])
+async def registrar_pago(
+    datos: schemas.PagoIn,
+    db: AsyncSession = Depends(get_db),
+    usuario: Usuario = Depends(requiere_directora),
+) -> schemas.PagoRegistroOut:
+    """Registra el pago de las asistencias pendientes de un docente en un rango.
+
+    Las asistencias incluidas quedan marcadas como pagadas y dejan de sumar al
+    saldo pendiente. Si el docente ya no tiene asistencias sin pagar en el rango,
+    la API responde 400.
+    """
+    docente = await db.get(Docente, datos.docente_id)
+    if docente is None:
+        raise HTTPException(status_code=404, detail="Docente no encontrado.")
+
+    calculo = await _calcular_pagos(db, datos.desde, datos.hasta, datos.docente_id)
+    pendientes = [d for d in calculo["detalle"] if not d["pagado"]]
+    if not pendientes:
+        raise HTTPException(
+            status_code=400,
+            detail="No hay asistencias pendientes de pago en ese rango para este docente.",
+        )
+
+    bruto = sum((Decimal(str(d["bruto"])) for d in pendientes), Decimal("0"))
+    descuento = sum((Decimal(str(d["descuento"])) for d in pendientes), Decimal("0"))
+    neto = sum((Decimal(str(d["neto"])) for d in pendientes), Decimal("0"))
+
+    pago = PagoDocente(
+        docente_id=datos.docente_id,
+        periodo_desde=datos.desde,
+        periodo_hasta=datos.hasta,
+        asistencias=len(pendientes),
+        bruto=float(round(bruto, 2)),
+        descuento=float(round(descuento, 2)),
+        neto=float(round(neto, 2)),
+        fecha_pago=ahora(),
+        registrado_por_id=usuario.id,
+    )
+    db.add(pago)
+    await db.flush()
+
+    ids = [d["asistencia_id"] for d in pendientes]
+    asistencias = (await db.scalars(select(Asistencia).where(Asistencia.id.in_(ids)))).all()
+    for a in asistencias:
+        a.pagado = True
+        a.pago_id = pago.id
+
+    await db.commit()
+    await db.refresh(pago)
+
+    return schemas.PagoRegistroOut(
+        id=pago.id,
+        docente_id=pago.docente_id,
+        docente_nombre=docente.nombre_completo,
+        periodo_desde=pago.periodo_desde,
+        periodo_hasta=pago.periodo_hasta,
+        asistencias=pago.asistencias,
+        bruto=float(pago.bruto or 0),
+        descuento=float(pago.descuento or 0),
+        neto=float(pago.neto or 0),
+        fecha_pago=pago.fecha_pago,
+        nota=pago.nota or "",
+    )
+
+
+@app.delete("/api/pagos/{pago_id}", tags=["pagos"])
+async def anular_pago(
+    pago_id: int,
+    db: AsyncSession = Depends(get_db),
+    _u: Usuario = Depends(requiere_directora),
+) -> dict:
+    """Anula un pago: sus asistencias vuelven a quedar como pendientes."""
+    pago = await db.get(PagoDocente, pago_id)
+    if pago is None:
+        raise HTTPException(status_code=404, detail="Pago no encontrado.")
+
+    asistencias = (
+        await db.scalars(select(Asistencia).where(Asistencia.pago_id == pago_id))
+    ).all()
+    for a in asistencias:
+        a.pagado = False
+        a.pago_id = None
+
+    await db.delete(pago)
+    await db.commit()
+    return {
+        "ok": True,
+        "mensaje": f"Pago anulado. {len(asistencias)} asistencia(s) vuelven a estar pendientes.",
+    }
 
 
 @app.get("/api/pagos/export", tags=["pagos"])

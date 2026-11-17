@@ -1019,7 +1019,8 @@ async function llenarSelectPagos() {
 
 function pintarPagos(datos, docentes = []) {
   const t = datos.totales || {};
-  $('#pagoNeto').textContent = soles(t.neto);
+  $('#pagoPendiente').textContent = soles(t.pendiente);
+  $('#pagoPagado').textContent = soles(t.pagado);
   $('#pagoBruto').textContent = soles(t.bruto);
   $('#pagoDescuento').textContent = soles(t.descuento);
   $('#pagoAsistencias').textContent = `${t.asistencias || 0} / ${t.docentes || 0}`;
@@ -1066,9 +1067,24 @@ function pintarPagos(datos, docentes = []) {
         ${r.bruto > 0 ? `<span class="text-[10px] text-slate-400">(${r.descuento_porcentaje.toFixed(1)}%)</span>` : ''}
       </td>
       <td class="td whitespace-nowrap text-xs font-bold text-emerald-600 dark:text-emerald-400">${soles(r.neto)}</td>
+      <td class="td whitespace-nowrap">
+        ${
+          r.todo_pagado
+            ? '<span class="badge-puntual">Pagado</span>'
+            : r.pagado > 0
+              ? `<span class="badge-tardanza">Parcial</span> <span class="text-[10px] text-slate-400">${soles(r.pendiente)}</span>`
+              : '<span class="badge-neutral">Pendiente</span>'
+        }
+      </td>
       <td class="td text-right whitespace-nowrap">
         <button class="btn-soft !px-2 !py-1 text-xs" data-editar-tarifa="${r.docente_id}"
                 data-nombre="${esc(r.nombre)}" data-tarifa="${r.tarifa_por_hora}">Tarifa</button>
+        ${
+          r.pendiente > 0
+            ? `<button class="btn-primary !px-2 !py-1 text-xs" data-pagar-docente="${r.docente_id}"
+                      data-nombre="${esc(r.nombre)}" data-pendiente="${r.pendiente}">Pagar</button>`
+            : ''
+        }
       </td>
     </tr>`
     )
@@ -1083,6 +1099,44 @@ function pintarPagos(datos, docentes = []) {
       )
     );
   });
+
+  $$('[data-pagar-docente]', tbody).forEach((btn) => {
+    btn.addEventListener('click', () =>
+      registrarPago(
+        Number(btn.dataset.pagarDocente),
+        btn.dataset.nombre,
+        Number(btn.dataset.pendiente || 0)
+      )
+    );
+  });
+
+  const tbodyRegistros = $('#pagoRegistros');
+  const registros = datos.pagos || [];
+  if (tbodyRegistros) {
+    $('#pagoRegistrosVacio').hidden = registros.length > 0;
+    tbodyRegistros.innerHTML = registros
+      .map(
+        (p) => `
+    <tr>
+      <td class="td whitespace-nowrap text-xs">${hhmmss(p.fecha_pago)} ${fechaCorta(p.fecha_pago)}</td>
+      <td class="td max-w-[200px] truncate text-xs font-medium">${esc(p.docente_nombre)}</td>
+      <td class="td whitespace-nowrap text-xs">${fechaCorta(p.periodo_desde)} – ${fechaCorta(p.periodo_hasta)}</td>
+      <td class="td text-xs">${p.asistencias}</td>
+      <td class="td whitespace-nowrap text-xs font-bold text-emerald-600 dark:text-emerald-400">${soles(p.neto)}</td>
+      <td class="td text-right whitespace-nowrap">
+        <button class="btn-soft !px-2 !py-1 text-xs" data-anular-pago="${p.id}"
+                data-nombre="${esc(p.docente_nombre)}" data-neto="${p.neto}">Anular</button>
+      </td>
+    </tr>`
+      )
+      .join('');
+
+    $$('[data-anular-pago]', tbodyRegistros).forEach((btn) => {
+      btn.addEventListener('click', () =>
+        anularPago(Number(btn.dataset.anularPago), btn.dataset.nombre, Number(btn.dataset.neto || 0))
+      );
+    });
+  }
 
   const tbodyDetalle = $('#pagoDetalle');
   const detalle = datos.detalle || [];
@@ -1109,9 +1163,58 @@ function pintarPagos(datos, docentes = []) {
         ${f.bruto > 0 ? `<span class="text-[10px] text-slate-400">(${f.descuento_porcentaje.toFixed(1)}%)</span>` : ''}
       </td>
       <td class="td whitespace-nowrap text-xs font-bold text-emerald-600 dark:text-emerald-400">${soles(f.neto)}</td>
+      <td class="td whitespace-nowrap">${
+        f.pagado ? '<span class="badge-puntual">Pagado</span>' : '<span class="badge-neutral">Pendiente</span>'
+      }</td>
     </tr>`
     )
     .join('');
+}
+
+async function registrarPago(docenteId, nombre, pendiente) {
+  const desde = $('#pagoDesde').value;
+  const hasta = $('#pagoHasta').value;
+  if (!desde || !hasta) {
+    toast('Selecciona el rango de fechas antes de pagar.', 'warn');
+    return;
+  }
+  if (
+    !confirm(
+      `¿Registrar el pago de ${soles(pendiente)} a ${nombre}?\n\n` +
+        `Periodo: ${fechaCorta(desde)} – ${fechaCorta(hasta)}\n` +
+        'Las asistencias pendientes de ese rango quedarán como pagadas y dejarán de contar como saldo.'
+    )
+  ) {
+    return;
+  }
+  try {
+    const pago = await api('/api/pagos/pagar', {
+      method: 'POST',
+      body: { docente_id: docenteId, desde, hasta },
+    });
+    toast(`Pago registrado: ${soles(pago.neto)} a ${nombre}.`, 'ok');
+    cargarPagos();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function anularPago(pagoId, nombre, neto) {
+  if (
+    !confirm(
+      `¿Anular el pago de ${soles(neto)} a ${nombre}?\n\n` +
+        'Sus asistencias volverán a quedar como pendientes de pago.'
+    )
+  ) {
+    return;
+  }
+  try {
+    const r = await api(`/api/pagos/${pagoId}`, { method: 'DELETE' });
+    toast(r.mensaje || 'Pago anulado.', 'ok');
+    cargarPagos();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
 }
 
 function abrirModalTarifa(id, nombre, tarifa) {

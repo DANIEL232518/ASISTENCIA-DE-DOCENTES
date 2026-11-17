@@ -369,18 +369,22 @@
       </div>
     </div>
 
-    <div class="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div class="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
       <div class="stat">
-        <p id="pagoNeto" class="stat-value text-emerald-600 dark:text-emerald-400">S/ 0.00</p>
-        <p class="stat-label">Neto a pagar</p>
+        <p id="pagoPendiente" class="stat-value text-emerald-600 dark:text-emerald-400">S/ 0.00</p>
+        <p class="stat-label">Pendiente por pagar</p>
       </div>
       <div class="stat">
-        <p id="pagoBruto" class="stat-value">S/ 0.00</p>
-        <p class="stat-label">Bruto</p>
+        <p id="pagoPagado" class="stat-value text-slate-500 dark:text-slate-400">S/ 0.00</p>
+        <p class="stat-label">Ya pagado</p>
       </div>
       <div class="stat">
         <p id="pagoDescuento" class="stat-value text-amber-600 dark:text-amber-400">S/ 0.00</p>
         <p class="stat-label">Descuentos</p>
+      </div>
+      <div class="stat">
+        <p id="pagoBruto" class="stat-value">S/ 0.00</p>
+        <p class="stat-label">Bruto</p>
       </div>
       <div class="stat">
         <p id="pagoAsistencias" class="stat-value">0</p>
@@ -405,6 +409,7 @@
               <th class="th">Bruto</th>
               <th class="th">Descuento</th>
               <th class="th">Neto</th>
+              <th class="th">Estado</th>
               <th class="th text-right">Acción</th>
             </tr>
           </thead>
@@ -413,6 +418,31 @@
       </div>
       <p id="pagoResumenVacio" class="py-10 text-center text-sm text-slate-400">
         No hay asistencias en el rango seleccionado.
+      </p>
+    </div>
+
+    <div class="card mb-4 overflow-hidden">
+      <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+        <p class="card-title">Pagos realizados en el periodo</p>
+        <span class="text-xs font-medium text-slate-400">Solo pagos registrados dentro del rango de fechas</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full table-zebra">
+          <thead class="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900">
+            <tr>
+              <th class="th">Fecha de pago</th>
+              <th class="th">Docente</th>
+              <th class="th">Periodo pagado</th>
+              <th class="th">Asistencias</th>
+              <th class="th">Neto pagado</th>
+              <th class="th text-right">Acción</th>
+            </tr>
+          </thead>
+          <tbody id="pagoRegistros"></tbody>
+        </table>
+      </div>
+      <p id="pagoRegistrosVacio" class="py-6 text-center text-sm text-slate-400">
+        Todavía no se registró ningún pago en este periodo.
       </p>
     </div>
 
@@ -435,6 +465,7 @@
               <th class="th">Bruto</th>
               <th class="th">Descuento</th>
               <th class="th">Neto</th>
+              <th class="th">Pago</th>
             </tr>
           </thead>
           <tbody id="pagoDetalle"></tbody>

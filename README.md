@@ -184,7 +184,12 @@ edita desde la app: toda cuenta nueva se crea como `ADMIN`.
 
 ### `asistencias`
 `id`, `evento_id`, `docente_id`, `registrado_por_id`, `hora_escaneo_real`, `hora_computable`, `estado`
-(`PUNTUAL` | `TARDANZA`) + `UNIQUE(evento_id, docente_id)`.
+(`PUNTUAL` | `TARDANZA`), `pagado` (bool), `pago_id` + `UNIQUE(evento_id, docente_id)`.
+
+### `pagos_docentes`
+`id`, `docente_id`, `periodo_desde`, `periodo_hasta`, `asistencias`, `bruto`, `descuento`, `neto`,
+`fecha_pago`, `registrado_por_id`. Cada pago agrupa las asistencias que se marcaron como pagadas;
+al anularlo, esas asistencias vuelven a `pagado = false`.
 
 Reglas aplicadas en `POST /api/asistencias/escaneo`:
 
@@ -203,6 +208,13 @@ Reglas aplicadas en `POST /api/asistencias/escaneo`:
   hora no cumplida). Dentro de la tolerancia no se descuenta nada. El apartado
   **Pagos** muestra el resumen por docente, el detalle por asistencia y permite
   exportar a Excel.
+
+* **Registro de pagos** (`POST /api/pagos/pagar`): el botón **Pagar** de la tabla
+  registra el pago de las asistencias pendientes del docente en el rango consultado.
+  Esas asistencias quedan marcadas como pagadas y dejan de sumar al **Pendiente por
+  pagar** (la tarjeta muestra por separado *Pendiente* y *Ya pagado*). El pago queda en
+  la tabla **Pagos realizados** y puede anularse con `DELETE /api/pagos/{id}`, lo que
+  devuelve las asistencias al estado pendiente.
 
 ---
 
@@ -250,7 +262,9 @@ GET    /api/asistencias?desde=&hasta=&docente_id=
 GET    /api/asistencias/export         → .xlsx
 DELETE /api/asistencias/{id}           (DIRECTORA)
 GET    /api/pagos?desde=&hasta=&docente_id=   → resumen y detalle de pagos
-GET    /api/pagos/export              → .xlsx de pagos
+POST   /api/pagos/pagar                  → registra el pago de un docente
+DELETE /api/pagos/{id}                   → anula un pago
+GET    /api/pagos/export                 → .xlsx de pagos
 GET    /api/usuarios · POST · PUT · DELETE   (DIRECTORA · la cuenta de Dirección no se puede borrar)
 GET    /api/health
 ```

@@ -252,6 +252,8 @@ class PagoTotalesOut(BaseModel):
     bruto: float = 0.0
     descuento: float = 0.0
     neto: float = 0.0
+    pagado: float = 0.0
+    pendiente: float = 0.0
 
 
 class PagoDocenteOut(BaseModel):
@@ -268,6 +270,10 @@ class PagoDocenteOut(BaseModel):
     descuento: float = 0.0
     descuento_porcentaje: float = 0.0
     neto: float = 0.0
+    pagado: float = 0.0
+    pendiente: float = 0.0
+    todo_pagado: bool = False
+    fecha_pago: datetime | None = None
 
 
 class PagoDetalleOut(BaseModel):
@@ -290,6 +296,35 @@ class PagoDetalleOut(BaseModel):
     docente_id: int
     docente_nombre: str
     docente_foto: str = ""
+    pagado: bool = False
+    pago_id: int | None = None
+    fecha_pago: datetime | None = None
+
+
+class PagoRegistroOut(BaseModel):
+    id: int
+    docente_id: int
+    docente_nombre: str = ""
+    periodo_desde: date
+    periodo_hasta: date
+    asistencias: int = 0
+    bruto: float = 0.0
+    descuento: float = 0.0
+    neto: float = 0.0
+    fecha_pago: datetime
+    nota: str = ""
+
+
+class PagoIn(BaseModel):
+    docente_id: int = Field(gt=0)
+    desde: date
+    hasta: date
+
+    @model_validator(mode="after")
+    def _rango_valido(self) -> "PagoIn":
+        if self.desde > self.hasta:
+            raise ValueError("La fecha inicial no puede ser posterior a la fecha final.")
+        return self
 
 
 class PagoOut(BaseModel):
@@ -298,3 +333,4 @@ class PagoOut(BaseModel):
     totales: PagoTotalesOut
     resumen: list[PagoDocenteOut] = []
     detalle: list[PagoDetalleOut] = []
+    pagos: list[PagoRegistroOut] = []

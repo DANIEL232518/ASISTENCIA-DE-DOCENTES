@@ -322,8 +322,8 @@ def exportar_asistencias(
 # ---------------------------------------------------------------------------
 _PAGO_MONEY = '"S/" #,##0.00'
 _PAGO_PCT = '0.0%'
-_PAGO_ANCHO_RESUMEN = [38, 14, 12, 12, 12, 13, 15, 15, 14, 15]
-_PAGO_ANCHO_DETALLE = [12, 34, 38, 13, 13, 13, 13, 14, 12, 14, 15, 15, 14, 15]
+_PAGO_ANCHO_RESUMEN = [38, 14, 12, 12, 12, 13, 15, 15, 14, 15, 14, 14]
+_PAGO_ANCHO_DETALLE = [12, 34, 38, 13, 13, 13, 13, 14, 12, 14, 15, 15, 14, 15, 13]
 
 
 def _encabezado_hoja(ws, titulo: str, periodo: str, columnas: int) -> int:
@@ -367,7 +367,7 @@ def exportar_pagos(
     ws = wb.active
     ws.title = "Resumen"
     ws.sheet_view.showGridLines = False
-    cabecera_filas = _encabezado_hoja(ws, "PAGO DE DOCENTES · NEUROCIENCIAS", periodo, 10)
+    cabecera_filas = _encabezado_hoja(ws, "PAGO DE DOCENTES · NEUROCIENCIAS", periodo, 12)
     _cabecera(
         ws,
         cabecera_filas,
@@ -382,6 +382,8 @@ def exportar_pagos(
             "Descuento",
             "% Descuento",
             "Neto a pagar",
+            "Pagado",
+            "Pendiente",
         ],
     )
 
@@ -400,6 +402,8 @@ def exportar_pagos(
             fila.get("descuento", 0),
             (fila.get("descuento", 0) / fila.get("bruto", 0)) if fila.get("bruto", 0) else 0,
             fila.get("neto", 0),
+            fila.get("pagado", 0),
+            fila.get("pendiente", 0),
         ]
         for col, valor in enumerate(valores, start=1):
             celda = ws.cell(row=r, column=col, value=valor)
@@ -409,7 +413,7 @@ def exportar_pagos(
             )
             if i % 2 == 1:
                 celda.fill = _ZEBRA
-            if col in (2, 7, 8, 10):
+            if col in (2, 7, 8, 10, 11, 12):
                 celda.number_format = _PAGO_MONEY
             if col == 9:
                 celda.number_format = _PAGO_PCT
@@ -424,6 +428,8 @@ def exportar_pagos(
         total_bruto = sum(float(f.get("bruto", 0) or 0) for f in filas_resumen)
         total_descuento = sum(float(f.get("descuento", 0) or 0) for f in filas_resumen)
         total_neto = sum(float(f.get("neto", 0) or 0) for f in filas_resumen)
+        total_pagado = sum(float(f.get("pagado", 0) or 0) for f in filas_resumen)
+        total_pendiente = sum(float(f.get("pendiente", 0) or 0) for f in filas_resumen)
         total_asistencias = sum(int(f.get("asistencias", 0) or 0) for f in filas_resumen)
         total_puntuales = sum(int(f.get("puntuales", 0) or 0) for f in filas_resumen)
         total_tardanzas = sum(int(f.get("tardanzas", 0) or 0) for f in filas_resumen)
@@ -439,6 +445,8 @@ def exportar_pagos(
             total_descuento,
             (total_descuento / total_bruto) if total_bruto else 0,
             total_neto,
+            total_pagado,
+            total_pendiente,
         ]
         for col, valor in enumerate(valores, start=1):
             celda = ws.cell(row=r, column=col, value=valor)
@@ -448,7 +456,7 @@ def exportar_pagos(
             celda.alignment = Alignment(
                 horizontal="left" if col == 1 else "center", vertical="center"
             )
-            if col in (2, 7, 8, 10):
+            if col in (2, 7, 8, 10, 11, 12):
                 celda.number_format = _PAGO_MONEY
             if col == 9:
                 celda.number_format = _PAGO_PCT
@@ -467,7 +475,7 @@ def exportar_pagos(
     ws.freeze_panes = ws.cell(row=cabecera_filas + 1, column=1)
     if filas_resumen:
         ws.auto_filter.ref = (
-            f"A{cabecera_filas}:J{cabecera_filas + len(filas_resumen)}"
+            f"A{cabecera_filas}:L{cabecera_filas + len(filas_resumen)}"
         )
 
         # Gráfico: neto a pagar por docente
@@ -491,7 +499,7 @@ def exportar_pagos(
     # --- Hoja 2: detalle por asistencia -----------------------------------
     ws2 = wb.create_sheet("Detalle")
     ws2.sheet_view.showGridLines = False
-    cab2 = _encabezado_hoja(ws2, "DETALLE DE PAGOS POR ASISTENCIA", periodo, 14)
+    cab2 = _encabezado_hoja(ws2, "DETALLE DE PAGOS POR ASISTENCIA", periodo, 15)
     _cabecera(
         ws2,
         cab2,
@@ -510,6 +518,7 @@ def exportar_pagos(
             "Descuento",
             "% Descuento",
             "Neto a pagar",
+            "Pago",
         ],
     )
 
@@ -533,6 +542,7 @@ def exportar_pagos(
             descuento,
             (descuento / bruto) if bruto else 0,
             fila.get("neto", 0),
+            "Pagado" if fila.get("pagado") else "Pendiente",
         ]
         for col, valor in enumerate(valores, start=1):
             celda = ws2.cell(row=r, column=col, value=valor)
@@ -559,7 +569,7 @@ def exportar_pagos(
         ws2.column_dimensions[get_column_letter(i)].width = ancho
     ws2.freeze_panes = ws2.cell(row=cab2 + 1, column=1)
     if filas_detalle:
-        ws2.auto_filter.ref = f"A{cab2}:N{cab2 + len(filas_detalle)}"
+        ws2.auto_filter.ref = f"A{cab2}:O{cab2 + len(filas_detalle)}"
 
     buffer = io.BytesIO()
     wb.save(buffer)
