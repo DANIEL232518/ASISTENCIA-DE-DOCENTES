@@ -123,11 +123,19 @@ async def actualizar_cuentas_base(db) -> None:
 
 
 async def seed() -> None:
-    """Crea las cuentas por defecto y los recursos estáticos iniciales."""
+    """Crea las cuentas por defecto y los recursos estáticos iniciales.
+
+    Las cuentas base solo se crean en una instalación nueva (tabla `usuarios`
+    vacía). Si ya existen cuentas, no se vuelven a crear: de lo contrario, cada
+    despliegue resucitaría la cuenta `directora@academia.pe` con su contraseña
+    por defecto aunque la Directora la hubiera eliminado o cambiado de correo.
+    """
     try:
         async with SessionLocal() as db:
-            await crear_si_falta(db, CUENTA_DIRECTORA)
-            await crear_si_falta(db, CUENTA_ADMIN)
+            total = await db.scalar(select(func.count()).select_from(Usuario))
+            if not total:
+                await crear_si_falta(db, CUENTA_DIRECTORA)
+                await crear_si_falta(db, CUENTA_ADMIN)
             await actualizar_cuentas_base(db)
     except Exception:  # noqa: BLE001
         logger.exception("Error al crear las cuentas por defecto")
