@@ -1335,6 +1335,7 @@ async def _calcular_pagos(
             "neto": float(p.neto or 0),
             "fecha_pago": p.fecha_pago,
             "nota": p.nota or "",
+            "registrado_por": p.registrado_por.nombre if p.registrado_por else "",
         }
         for p in pagos
     ]
@@ -1488,7 +1489,11 @@ async def exportar_pagos_excel(
 
     periodo = f"{fecha_desde.strftime('%d/%m/%Y')} al {fecha_hasta.strftime('%d/%m/%Y')}"
     contenido = await run_in_threadpool(
-        utils_excel.exportar_pagos, datos["resumen"], datos["detalle"], periodo
+        utils_excel.exportar_pagos,
+        datos["resumen"],
+        datos["detalle"],
+        periodo,
+        datos["pagos"],
     )
     nombre = f"pagos_{fecha_desde.strftime('%Y%m%d')}"
     if fecha_hasta != fecha_desde:

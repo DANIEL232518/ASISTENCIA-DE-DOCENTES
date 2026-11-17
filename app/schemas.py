@@ -313,6 +313,7 @@ class PagoRegistroOut(BaseModel):
     neto: float = 0.0
     fecha_pago: datetime
     nota: str = ""
+    registrado_por: str = ""
 
 
 class PagoIn(BaseModel):

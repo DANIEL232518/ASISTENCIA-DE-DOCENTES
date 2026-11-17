@@ -41,7 +41,11 @@ def _fmt(valor, tipo: str) -> str:
     if valor is None:
         return ""
     if isinstance(valor, datetime):
-        return valor.strftime("%d/%m/%Y") if tipo == "fecha" else valor.strftime("%H:%M:%S")
+        if tipo == "fecha":
+            return valor.strftime("%d/%m/%Y")
+        if tipo == "fecha_hora":
+            return valor.strftime("%d/%m/%Y %H:%M")
+        return valor.strftime("%H:%M:%S")
     if isinstance(valor, date):
         return valor.strftime("%d/%m/%Y")
     if isinstance(valor, time):
@@ -322,8 +326,9 @@ def exportar_asistencias(
 # ---------------------------------------------------------------------------
 _PAGO_MONEY = '"S/" #,##0.00'
 _PAGO_PCT = '0.0%'
-_PAGO_ANCHO_RESUMEN = [38, 14, 12, 12, 12, 13, 15, 15, 14, 15, 14, 14]
-_PAGO_ANCHO_DETALLE = [12, 34, 38, 13, 13, 13, 13, 14, 12, 14, 15, 15, 14, 15, 13]
+_PAGO_ANCHO_RESUMEN = [38, 14, 12, 12, 12, 13, 15, 15, 14, 15, 14, 14, 22]
+_PAGO_ANCHO_DETALLE = [12, 34, 38, 13, 13, 13, 13, 14, 12, 14, 15, 15, 14, 15, 13, 18]
+_PAGO_ANCHO_PAGOS = [20, 38, 14, 14, 12, 15, 15, 16, 28]
 
 
 def _encabezado_hoja(ws, titulo: str, periodo: str, columnas: int) -> int:
@@ -359,15 +364,28 @@ def exportar_pagos(
     resumen: Iterable[dict],
     detalle: Iterable[dict],
     periodo: str = "",
+    pagos: Iterable[dict] | None = None,
 ) -> bytes:
-    """Devuelve un .xlsx con dos hojas: resumen por docente y detalle de asistencias."""
+    """Devuelve un .xlsx con tres hojas: resumen, detalle y pagos registrados."""
     wb = Workbook()
+    filas_resumen = list(resumen)
+    filas_detalle = list(detalle)
+    filas_pagos = list(pagos or [])
+
+    # Fechas de pago por docente (una o varias si pagó en días distintos).
+    fechas_por_docente: dict[int, list[str]] = {}
+    for fila in filas_detalle:
+        if fila.get("pagado") and fila.get("fecha_pago"):
+            etiqueta = _fmt(fila.get("fecha_pago"), "fecha_hora")
+            lista = fechas_por_docente.setdefault(fila.get("docente_id"), [])
+            if etiqueta not in lista:
+                lista.append(etiqueta)
 
     # --- Hoja 1: resumen por docente --------------------------------------
     ws = wb.active
     ws.title = "Resumen"
     ws.sheet_view.showGridLines = False
-    cabecera_filas = _encabezado_hoja(ws, "PAGO DE DOCENTES · NEUROCIENCIAS", periodo, 12)
+    cabecera_filas = _encabezado_hoja(ws, "PAGO DE DOCENTES · NEUROCIENCIAS", periodo, 13)
     _cabecera(
         ws,
         cabecera_filas,
@@ -384,13 +402,14 @@ def exportar_pagos(
             "Neto a pagar",
             "Pagado",
             "Pendiente",
+            "Fecha de pago",
         ],
     )
 
-    filas_resumen = list(resumen)
     r = cabecera_filas
     for i, fila in enumerate(filas_resumen):
         r += 1
+        fechas = fechas_por_docente.get(fila.get("docente_id"), [])
         valores = [
             fila.get("nombre", ""),
             fila.get("tarifa_por_hora", 0),
@@ -404,12 +423,13 @@ def exportar_pagos(
             fila.get("neto", 0),
             fila.get("pagado", 0),
             fila.get("pendiente", 0),
+            ", ".join(fechas) if fechas else "—",
         ]
         for col, valor in enumerate(valores, start=1):
             celda = ws.cell(row=r, column=col, value=valor)
             celda.border = _BORDE
             celda.alignment = Alignment(
-                horizontal="left" if col == 1 else "center", vertical="center"
+                horizontal="left" if col in (1, 13) else "center", vertical="center"
             )
             if i % 2 == 1:
                 celda.fill = _ZEBRA
@@ -447,6 +467,7 @@ def exportar_pagos(
             total_neto,
             total_pagado,
             total_pendiente,
+            "",
         ]
         for col, valor in enumerate(valores, start=1):
             celda = ws.cell(row=r, column=col, value=valor)
@@ -475,7 +496,7 @@ def exportar_pagos(
     ws.freeze_panes = ws.cell(row=cabecera_filas + 1, column=1)
     if filas_resumen:
         ws.auto_filter.ref = (
-            f"A{cabecera_filas}:L{cabecera_filas + len(filas_resumen)}"
+            f"A{cabecera_filas}:M{cabecera_filas + len(filas_resumen)}"
         )
 
         # Gráfico: neto a pagar por docente
@@ -499,7 +520,7 @@ def exportar_pagos(
     # --- Hoja 2: detalle por asistencia -----------------------------------
     ws2 = wb.create_sheet("Detalle")
     ws2.sheet_view.showGridLines = False
-    cab2 = _encabezado_hoja(ws2, "DETALLE DE PAGOS POR ASISTENCIA", periodo, 15)
+    cab2 = _encabezado_hoja(ws2, "DETALLE DE PAGOS POR ASISTENCIA", periodo, 16)
     _cabecera(
         ws2,
         cab2,
@@ -519,10 +540,10 @@ def exportar_pagos(
             "% Descuento",
             "Neto a pagar",
             "Pago",
+            "Fecha de pago",
         ],
     )
 
-    filas_detalle = list(detalle)
     for i, fila in enumerate(filas_detalle):
         r = cab2 + 1 + i
         bruto = float(fila.get("bruto", 0) or 0)
@@ -543,12 +564,13 @@ def exportar_pagos(
             (descuento / bruto) if bruto else 0,
             fila.get("neto", 0),
             "Pagado" if fila.get("pagado") else "Pendiente",
+            _fmt(fila.get("fecha_pago"), "fecha_hora") if fila.get("pagado") else "",
         ]
         for col, valor in enumerate(valores, start=1):
             celda = ws2.cell(row=r, column=col, value=valor)
             celda.border = _BORDE
             celda.alignment = Alignment(
-                horizontal="left" if col in (2, 3) else "center", vertical="center"
+                horizontal="left" if col in (2, 3, 16) else "center", vertical="center"
             )
             if i % 2 == 1:
                 celda.fill = _ZEBRA
@@ -569,7 +591,94 @@ def exportar_pagos(
         ws2.column_dimensions[get_column_letter(i)].width = ancho
     ws2.freeze_panes = ws2.cell(row=cab2 + 1, column=1)
     if filas_detalle:
-        ws2.auto_filter.ref = f"A{cab2}:O{cab2 + len(filas_detalle)}"
+        ws2.auto_filter.ref = f"A{cab2}:P{cab2 + len(filas_detalle)}"
+
+    # --- Hoja 3: pagos registrados ----------------------------------------
+    ws3 = wb.create_sheet("Pagos")
+    ws3.sheet_view.showGridLines = False
+    cab3 = _encabezado_hoja(ws3, "PAGOS REGISTRADOS A DOCENTES", periodo, 9)
+    _cabecera(
+        ws3,
+        cab3,
+        [
+            "Fecha de pago",
+            "Docente",
+            "Periodo desde",
+            "Periodo hasta",
+            "Asistencias",
+            "Bruto",
+            "Descuento",
+            "Neto pagado",
+            "Registrado por",
+        ],
+    )
+
+    for i, fila in enumerate(filas_pagos):
+        r = cab3 + 1 + i
+        valores = [
+            _fmt(fila.get("fecha_pago"), "fecha_hora"),
+            fila.get("docente_nombre", ""),
+            _fmt(fila.get("periodo_desde"), "fecha"),
+            _fmt(fila.get("periodo_hasta"), "fecha"),
+            fila.get("asistencias", 0),
+            float(fila.get("bruto", 0) or 0),
+            float(fila.get("descuento", 0) or 0),
+            float(fila.get("neto", 0) or 0),
+            fila.get("registrado_por", "") or "—",
+        ]
+        for col, valor in enumerate(valores, start=1):
+            celda = ws3.cell(row=r, column=col, value=valor)
+            celda.border = _BORDE
+            celda.alignment = Alignment(
+                horizontal="left" if col in (1, 2, 9) else "center", vertical="center"
+            )
+            if i % 2 == 1:
+                celda.fill = _ZEBRA
+            if col in (6, 7, 8):
+                celda.number_format = _PAGO_MONEY
+        ws3.row_dimensions[r].height = 20
+
+    if filas_pagos:
+        r = cab3 + len(filas_pagos) + 1
+        total_pagado = sum(float(f.get("neto", 0) or 0) for f in filas_pagos)
+        valores = [
+            "TOTAL",
+            "",
+            "",
+            "",
+            sum(int(f.get("asistencias", 0) or 0) for f in filas_pagos),
+            sum(float(f.get("bruto", 0) or 0) for f in filas_pagos),
+            sum(float(f.get("descuento", 0) or 0) for f in filas_pagos),
+            total_pagado,
+            "",
+        ]
+        for col, valor in enumerate(valores, start=1):
+            celda = ws3.cell(row=r, column=col, value=valor)
+            celda.font = Font(bold=True, size=11, color="0F172A")
+            celda.fill = PatternFill("solid", fgColor="E2E8F0")
+            celda.border = _BORDE
+            celda.alignment = Alignment(
+                horizontal="left" if col == 1 else "center", vertical="center"
+            )
+            if col in (6, 7, 8):
+                celda.number_format = _PAGO_MONEY
+
+    # Pie: credito del desarrollador
+    r_pie = cab3 + len(filas_pagos) + 3
+    pie = ws3.cell(row=r_pie, column=1, value="© 2026 Neurociencias · Todos los derechos reservados")
+    pie.font = Font(size=9, color="94A3B8", italic=True)
+    pie2 = ws3.cell(
+        row=r_pie + 1,
+        column=1,
+        value="Desarrollado por Jhon Daniel Pari Valencia · Contacto 900717074",
+    )
+    pie2.font = Font(size=9, color="94A3B8", italic=True)
+
+    for i, ancho in enumerate(_PAGO_ANCHO_PAGOS, start=1):
+        ws3.column_dimensions[get_column_letter(i)].width = ancho
+    ws3.freeze_panes = ws3.cell(row=cab3 + 1, column=1)
+    if filas_pagos:
+        ws3.auto_filter.ref = f"A{cab3}:I{cab3 + len(filas_pagos)}"
 
     buffer = io.BytesIO()
     wb.save(buffer)
