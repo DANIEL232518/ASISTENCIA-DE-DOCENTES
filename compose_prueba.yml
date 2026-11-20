@@ -1,0 +1,62 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: prueba_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: prueba
+      POSTGRES_PASSWORD: prueba2026
+      POSTGRES_DB: prueba
+      TZ: America/Lima
+      PGTZ: America/Lima
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prueba -d prueba"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    networks:
+      - asistencia_net
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: prueba_app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8001:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://prueba:prueba2026@db:5432/prueba
+      JWT_SECRET: prueba-local-secreto-para-tests-0123456789
+      JWT_MINUTOS: "720"
+      TZ: America/Lima
+      TZ_NAME: America/Lima
+      BASE_URL: http://localhost:8001
+      MAX_DOCENTES: "40"
+      LOG_LEVEL: info
+    volumes:
+      - uploads:/app/app/static/uploads
+    healthcheck:
+      test:
+        - "CMD"
+          python -c "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/api/health',timeout=4)"
+      interval: 10s
+      timeout: 6s
+      retries: 20
+      start_period: 20s
+    networks:
+      - asistencia_net
+
+volumes:
+  pgdata:
+  uploads:
+
+networks:
+  asistencia_net:
+    driver: bridge
