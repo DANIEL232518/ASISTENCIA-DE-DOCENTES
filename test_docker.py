@@ -90,20 +90,20 @@ async def main():
         res = r.json()
         check("recurrente solo domingos -> 201", r.status_code == 201, str(r.text[:160]))
         check("generados > 0", res["generados"] > 0, str(res["generados"]))
-        # Verificar que todos los fechas generadas son domingos
-        from datetime import timedelta
-        start = domingo
-        end = domingo + timedelta(days=28)
-        expected_sundays = sum(1 for d in [start + timedelta(days=i) for i in range(29)] if d.weekday() == 6)
-        actual_sundays = sum(1 for e in res.get("generados_eventos", res.get("result", [])) if False)  # placeholder
-        # Simple check: count events whose fecha weekday==6 among returned events
-        events = res.get("events", []) or res.get("result", [])
-        actual_count = sum(1 for e in events if e.get("fecha").date().weekday() == 6)
-        check(f"todos los eventos de la serie caen en domingo ({expected_sundays})", actual_count == expected_sundays,
-              f"actual={actual_count} esperado={expected_sundays}")
-        # Duplicado escaneo -> 409
+
+        # Verificar que todos los eventos de la serie caen en domingo
+        r = await c.get("/api/eventos", headers=H, params={"desde": domingo.isoformat(), "hasta": hasta_rec.isoformat()})
+        evs = r.json() if r.status_code == 200 else []
+        serie = [e for e in evs if e["titulo"] == "Domingo · Recurrente"]
+        esperados = sum(1 for i in range(29) if (domingo + timedelta(days=i)).weekday() == 6)
+        check("todos los eventos de la serie caen en domingo",
+              len(serie) == esperados and all(date.fromisoformat(e["fecha"]).weekday() == 6 for e in serie),
+              f"serie={len(serie)} esperados={esperados}")
+
+        # Escaneo real y duplicados
         r = await c.post("/api/asistencias/escaneo", headers=H, json={"qr_token": token, "evento_id": eid_hoy})
-        check("duplicado escaneo -> 409", r.status_code == 409, str(r.status_code))
+        check("escaneo", r.status_code == 200, str(r.text[:120]))
+        aid = r.json()["asistencia"]["id"] if r.status_code == 200 else None
         r = await c.post("/api/asistencias/escaneo", headers=H, json={"qr_token": token, "evento_id": eid_hoy})
         check("duplicado escaneo -> 409", r.status_code == 409, str(r.status_code))
         r = await c.post("/api/asistencias/escaneo", headers=H,
